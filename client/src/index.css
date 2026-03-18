@@ -1,0 +1,90 @@
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Roboto:wght@400;500;700;900&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  * {
+    @apply box-border;
+  }
+
+  body {
+    @apply min-h-screen font-display text-ink;
+    background: radial-gradient(circle at top, rgba(36, 241, 200, 0.12), transparent 45%),
+      radial-gradient(circle at 10% 20%, rgba(62, 112, 255, 0.2), transparent 40%),
+      linear-gradient(145deg, #0b0f1c, #0e1a2b 45%, #111f36);
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-3xl border border-white/10 bg-panel p-8 shadow-panel backdrop-blur;
+  }
+
+  .badge {
+    @apply font-mono text-xs uppercase tracking-[0.3em] text-accent;
+  }
+
+  .glitch {
+    position: relative;
+    text-shadow: 0 0 20px rgba(36, 241, 200, 0.4);
+  }
+
+  .glitch::before,
+  .glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    overflow: hidden;
+    opacity: 0.7;
+    mix-blend-mode: screen;
+  }
+
+  .glitch::before {
+    color: #a855f7;
+    transform: none;
+    clip-path: inset(0 0 55% 0);
+    animation: glitch-flicker 2.4s infinite steps(2, end);
+  }
+
+  .glitch::after {
+    color: #f0abfc;
+    transform: none;
+    clip-path: inset(45% 0 0 0);
+    animation: glitch-flicker 1.8s infinite steps(2, end) reverse;
+  }
+}
+
+@keyframes glitch-flicker {
+  0%,
+  100% {
+    opacity: 0.7;
+    clip-path: inset(0 0 55% 0);
+  }
+  35% {
+    opacity: 0.4;
+    clip-path: inset(10% 0 40% 0);
+  }
+  70% {
+    opacity: 0.85;
+    clip-path: inset(0 0 65% 0);
+  }
+}
+
+@layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
