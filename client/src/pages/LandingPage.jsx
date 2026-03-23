@@ -1,10 +1,10 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import LoginModal from "../components/LoginModal";
 
 const FRAME_COUNT = 180;
-const REVEAL_FRAME = 130;
+const REVEAL_FRAME = 140;
 const FRAME_PREFIX = "/frames/ezgif-frame-";
 const FRAME_EXTENSION = ".png";
 
@@ -22,6 +22,7 @@ export default function LandingPage() {
   const imagesRef = useRef(new Array(FRAME_COUNT + 1));
   const currentFrameRef = useRef(1);
   const [displayFrame, setDisplayFrame] = useState(1);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
   const displayFrameRef = useRef(1);
 
   const revealActive = useMemo(
@@ -73,7 +74,7 @@ export default function LandingPage() {
     const canvas = canvasRef.current;
     const scroller = scrollerRef.current;
     const wrapper = wrapperRef.current;
-    if (!canvas) return undefined;
+    if (!canvas || !scroller || !wrapper) return undefined;
 
     const previousHtmlOverflow = document.documentElement.style.overflow;
     const previousBodyOverflow = document.body.style.overflow;
@@ -86,11 +87,7 @@ export default function LandingPage() {
       renderFrame(Math.round(currentFrameRef.current));
     };
 
-    handleResize();
-    loadFrame(1);
     const handleKeyDown = (event) => {
-      if (!scroller) return;
-
       const { key } = event;
       const isDown = key === "ArrowDown" || key === "PageDown" || key === " ";
       const isUp = key === "ArrowUp" || key === "PageUp";
@@ -102,12 +99,13 @@ export default function LandingPage() {
       scroller.scrollBy({ top: delta, behavior: "smooth" });
     };
 
-    scroller?.focus({ preventScroll: true });
+    handleResize();
+    loadFrame(1);
+    scroller.focus({ preventScroll: true });
     window.addEventListener("resize", handleResize);
     window.addEventListener("keydown", handleKeyDown, { passive: false });
 
     const frameState = { value: 1 };
-
     const ctx = gsap.context(() => {
       gsap.to(frameState, {
         value: FRAME_COUNT,
@@ -131,7 +129,6 @@ export default function LandingPage() {
           }
         }
       });
-
     }, scroller);
 
     ScrollTrigger.refresh();
@@ -176,12 +173,13 @@ export default function LandingPage() {
                       CodeVerse
                     </div>
                   </div>
-                  <Link
-                    to="/login"
+                  <button
+                    type="button"
+                    onClick={() => setIsLoginOpen(true)}
                     className="pointer-events-auto rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold text-ink backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20"
                   >
                     Login
-                  </Link>
+                  </button>
                 </header>
 
                 <div className="flex flex-1 items-center px-6 md:px-12">
@@ -193,7 +191,7 @@ export default function LandingPage() {
                     }`}
                   >
                     <h1
-                      className="glitch text-5xl font-semibold text-transparent bg-gradient-to-r from-fuchsia-400 via-purple-400 to-violet-300 bg-clip-text sm:text-7xl lg:text-8xl"
+                      className="glitch bg-gradient-to-r from-fuchsia-400 via-purple-400 to-violet-300 bg-clip-text text-5xl font-semibold text-transparent sm:text-7xl lg:text-8xl"
                       data-text="CodeVerse"
                     >
                       CodeVerse
@@ -202,23 +200,30 @@ export default function LandingPage() {
                       Enter the Arena
                     </p>
                     <p className="mt-5 max-w-lg text-base text-muted sm:text-lg">
-                      Frame 130 unlocks the arena sequence. Scroll to sync.
+                      Frame {REVEAL_FRAME} unlocks the arena sequence. Scroll to
+                      sync.
                     </p>
                     <div className="mt-7 flex items-center gap-4 text-xs text-muted">
                       <span className="h-px w-16 bg-gradient-to-r from-fuchsia-400 to-violet-300" />
-                      <span>Systems online · Access gated</span>
+                      <span>Systems online - Access gated</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="pb-10 px-6 text-left text-xs text-muted md:px-12">
+                <div className="px-6 pb-10 text-left text-xs text-muted md:px-12">
                   Scroll to explore the arena sequence.
                 </div>
+              </div>
+
+              <div className="pointer-events-none absolute bottom-10 right-6 font-mono text-xs text-fuchsia-200/60 md:right-12">
+                {String(displayFrame).padStart(3, "0")} / {FRAME_COUNT}
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
     </div>
   );
 }

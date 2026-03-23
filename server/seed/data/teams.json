@@ -1,0 +1,20 @@
+[
+  {
+    "teamName": "Alpha Coders",
+    "teamId": "ALPHA001",
+    "password": "Team@123",
+    "members": [
+      { "name": "Aarav", "email": "aarav@codeverse.local", "phone": "9000000001" },
+      { "name": "Isha", "email": "isha@codeverse.local", "phone": "9000000002" }
+    ]
+  },
+  {
+    "teamName": "Binary Beasts",
+    "teamId": "BINARY002",
+    "password": "Team@123",
+    "members": [
+      { "name": "Riya", "email": "riya@codeverse.local", "phone": "9000000003" },
+      { "name": "Kunal", "email": "kunal@codeverse.local", "phone": "9000000004" }
+    ]
+  }
+]

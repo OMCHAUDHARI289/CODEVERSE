@@ -1,0 +1,128 @@
+[
+  {
+    "round": 2,
+    "title": "Sum Pair",
+    "description": "Read two integers and print their sum.",
+    "difficulty": "easy",
+    "inputFormat": "Two space-separated integers a and b.",
+    "outputFormat": "Print a + b.",
+    "constraints": ["-10^9 <= a, b <= 10^9"],
+    "visibleTestCases": [
+      { "input": "2 3", "output": "5", "ignoreOrder": false },
+      { "input": "-5 11", "output": "6", "ignoreOrder": false }
+    ],
+    "hiddenTestCases": [
+      { "input": "1000000 2500000", "output": "3500000", "ignoreOrder": false },
+      { "input": "-7 -8", "output": "-15", "ignoreOrder": false }
+    ],
+    "starterCode": {
+      "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  long long a, b;\n  cin >> a >> b;\n  // print answer\n  return 0;\n}\n",
+      "java": "import java.util.*;\n\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    long a = sc.nextLong();\n    long b = sc.nextLong();\n    // print answer\n  }\n}\n"
+    }
+  },
+  {
+    "round": 2,
+    "title": "Count Vowels",
+    "description": "Given a single lowercase string, print the count of vowels (a, e, i, o, u).",
+    "difficulty": "easy",
+    "inputFormat": "A single string s.",
+    "outputFormat": "Print the number of vowels.",
+    "constraints": ["1 <= |s| <= 10^5"],
+    "visibleTestCases": [
+      { "input": "codeverse", "output": "4", "ignoreOrder": false },
+      { "input": "rhythm", "output": "0", "ignoreOrder": false }
+    ],
+    "hiddenTestCases": [
+      { "input": "aeiou", "output": "5", "ignoreOrder": false },
+      { "input": "hackathon", "output": "3", "ignoreOrder": false }
+    ],
+    "starterCode": {
+      "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  string s;\n  cin >> s;\n  // print answer\n  return 0;\n}\n",
+      "java": "import java.util.*;\n\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    String s = sc.next();\n    // print answer\n  }\n}\n"
+    }
+  },
+  {
+    "round": 2,
+    "title": "Second Largest Number",
+    "description": "Given n integers, print the second largest distinct value.",
+    "difficulty": "medium",
+    "inputFormat": "First line n. Second line contains n integers.",
+    "outputFormat": "Print second largest distinct value.",
+    "constraints": ["2 <= n <= 2 * 10^5"],
+    "visibleTestCases": [
+      { "input": "5\n1 5 2 9 7", "output": "7", "ignoreOrder": false },
+      { "input": "6\n4 4 2 9 9 3", "output": "4", "ignoreOrder": false }
+    ],
+    "hiddenTestCases": [
+      { "input": "4\n10 8 6 4", "output": "8", "ignoreOrder": false },
+      { "input": "7\n1 1 1 5 5 3 2", "output": "3", "ignoreOrder": false }
+    ],
+    "starterCode": {
+      "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  int n;\n  cin >> n;\n  vector<long long> a(n);\n  for (int i = 0; i < n; i++) cin >> a[i];\n  // print answer\n  return 0;\n}\n",
+      "java": "import java.util.*;\n\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    int n = sc.nextInt();\n    long[] a = new long[n];\n    for (int i = 0; i < n; i++) a[i] = sc.nextLong();\n    // print answer\n  }\n}\n"
+    }
+  },
+  {
+    "round": 2,
+    "title": "Balanced Parentheses",
+    "description": "Given a string containing only ()[]{} characters, print YES if balanced else NO.",
+    "difficulty": "medium",
+    "inputFormat": "A single string s.",
+    "outputFormat": "YES or NO.",
+    "constraints": ["1 <= |s| <= 2 * 10^5"],
+    "visibleTestCases": [
+      { "input": "{[()]}", "output": "YES", "ignoreOrder": false },
+      { "input": "([)]", "output": "NO", "ignoreOrder": false }
+    ],
+    "hiddenTestCases": [
+      { "input": "(((())))", "output": "YES", "ignoreOrder": false },
+      { "input": "{[(])}", "output": "NO", "ignoreOrder": false }
+    ],
+    "starterCode": {
+      "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  string s;\n  cin >> s;\n  // print YES or NO\n  return 0;\n}\n",
+      "java": "import java.util.*;\n\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    String s = sc.next();\n    // print YES or NO\n  }\n}\n"
+    }
+  },
+  {
+    "round": 2,
+    "title": "Shortest Path in Unweighted Graph",
+    "description": "Given an undirected unweighted graph, find the shortest distance from source to destination using BFS.",
+    "difficulty": "hard",
+    "inputFormat": "n m on first line. Next m lines: u v. Last line: src dst.",
+    "outputFormat": "Shortest distance, or -1 if unreachable.",
+    "constraints": ["1 <= n <= 2 * 10^5", "1 <= m <= 2 * 10^5"],
+    "visibleTestCases": [
+      { "input": "5 5\n1 2\n2 3\n3 4\n4 5\n1 5\n1 4", "output": "3", "ignoreOrder": false },
+      { "input": "4 2\n1 2\n3 4\n1 4", "output": "-1", "ignoreOrder": false }
+    ],
+    "hiddenTestCases": [
+      { "input": "6 7\n1 2\n2 3\n3 6\n1 4\n4 5\n5 6\n2 5\n1 6", "output": "3", "ignoreOrder": false },
+      { "input": "3 1\n1 2\n2 1", "output": "1", "ignoreOrder": false }
+    ],
+    "starterCode": {
+      "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  int n, m;\n  cin >> n >> m;\n  vector<vector<int>> g(n + 1);\n  for (int i = 0; i < m; i++) {\n    int u, v;\n    cin >> u >> v;\n    g[u].push_back(v);\n    g[v].push_back(u);\n  }\n  int src, dst;\n  cin >> src >> dst;\n  // print shortest distance\n  return 0;\n}\n",
+      "java": "import java.util.*;\n\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    int n = sc.nextInt();\n    int m = sc.nextInt();\n    List<List<Integer>> g = new ArrayList<>();\n    for (int i = 0; i <= n; i++) g.add(new ArrayList<>());\n    for (int i = 0; i < m; i++) {\n      int u = sc.nextInt();\n      int v = sc.nextInt();\n      g.get(u).add(v);\n      g.get(v).add(u);\n    }\n    int src = sc.nextInt();\n    int dst = sc.nextInt();\n    // print shortest distance\n  }\n}\n"
+    }
+  },
+  {
+    "round": 2,
+    "title": "Merge Intervals",
+    "description": "Given n intervals, merge all overlapping intervals and print the resulting intervals in order of start.",
+    "difficulty": "hard",
+    "inputFormat": "First line n. Next n lines contain l r.",
+    "outputFormat": "Each merged interval in a new line as 'l r'.",
+    "constraints": ["1 <= n <= 2 * 10^5"],
+    "visibleTestCases": [
+      { "input": "4\n1 3\n2 6\n8 10\n15 18", "output": "1 6\n8 10\n15 18", "ignoreOrder": false },
+      { "input": "3\n1 4\n4 5\n7 9", "output": "1 5\n7 9", "ignoreOrder": false }
+    ],
+    "hiddenTestCases": [
+      { "input": "5\n1 2\n3 5\n4 6\n8 9\n9 12", "output": "1 2\n3 6\n8 12", "ignoreOrder": false },
+      { "input": "2\n2 3\n4 5", "output": "2 3\n4 5", "ignoreOrder": false }
+    ],
+    "starterCode": {
+      "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  int n;\n  cin >> n;\n  vector<pair<long long, long long>> intervals(n);\n  for (int i = 0; i < n; i++) cin >> intervals[i].first >> intervals[i].second;\n  // print merged intervals\n  return 0;\n}\n",
+      "java": "import java.util.*;\n\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    int n = sc.nextInt();\n    long[][] intervals = new long[n][2];\n    for (int i = 0; i < n; i++) {\n      intervals[i][0] = sc.nextLong();\n      intervals[i][1] = sc.nextLong();\n    }\n    // print merged intervals\n  }\n}\n"
+    }
+  }
+]

@@ -6,7 +6,7 @@ export const roleOptions = {
       label: "Team ID",
       placeholder: "Enter your team id"
     },
-    endpoint: "/api/auth/login"
+    endpoint: "/api/auth/team/login"
   },
   admin: {
     label: "Admin",

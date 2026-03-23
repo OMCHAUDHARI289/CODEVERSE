@@ -1,0 +1,184 @@
+[
+    {
+        "round":  1,
+        "title":  "What is the output of this code?",
+        "codeSnippet":  "console.log(typeof NaN)",
+        "options":  [
+                        "number",
+                        "NaN",
+                        "undefined",
+                        "object"
+                    ],
+        "correctAnswer":  0,
+        "marks":  10
+    },
+    {
+        "round":  1,
+        "title":  "Which data structure uses FIFO?",
+        "options":  [
+                        "Stack",
+                        "Queue",
+                        "Tree",
+                        "Graph"
+                    ],
+        "correctAnswer":  1,
+        "marks":  10
+    },
+    {
+        "round":  1,
+        "title":  "Time complexity of binary search?",
+        "options":  [
+                        "O(1)",
+                        "O(n)",
+                        "O(log n)",
+                        "O(n log n)"
+                    ],
+        "correctAnswer":  2,
+        "marks":  10
+    },
+    {
+        "round":  1,
+        "title":  "Which keyword declares a block-scoped variable in JavaScript?",
+        "options":  [
+                        "var",
+                        "static",
+                        "let",
+                        "global"
+                    ],
+        "correctAnswer":  2,
+        "marks":  10
+    },
+    {
+        "round":  1,
+        "title":  "Which traversal visits Left, Root, Right in a binary tree?",
+        "options":  [
+                        "Preorder",
+                        "Inorder",
+                        "Postorder",
+                        "Level order"
+                    ],
+        "correctAnswer":  1,
+        "marks":  10
+    },
+    {
+        "round":  1,
+        "title":  "Which SQL clause is used to filter grouped rows?",
+        "options":  [
+                        "WHERE",
+                        "ORDER BY",
+                        "HAVING",
+                        "DISTINCT"
+                    ],
+        "correctAnswer":  2,
+        "marks":  10
+    },
+    {
+        "round":  1,
+        "title":  "What does HTTP status code 404 represent?",
+        "options":  [
+                        "Unauthorized",
+                        "Not Found",
+                        "Bad Gateway",
+                        "Conflict"
+                    ],
+        "correctAnswer":  1,
+        "marks":  10
+    },
+    {
+        "round":  1,
+        "title":  "Which sorting algorithm has average-case O(n log n)?",
+        "options":  [
+                        "Bubble Sort",
+                        "Selection Sort",
+                        "Merge Sort",
+                        "Insertion Sort"
+                    ],
+        "correctAnswer":  2,
+        "marks":  10
+    },
+    {
+        "round":  1,
+        "title":  "What is the output of this expression in JavaScript?",
+        "codeSnippet":  "[] + {}",
+        "options":  [
+                        "0",
+                        "[object Object]",
+                        "NaN",
+                        "TypeError"
+                    ],
+        "correctAnswer":  1,
+        "marks":  10
+    },
+    {
+        "round":  1,
+        "title":  "Which operation is typically O(1) in a hash table?",
+        "options":  [
+                        "Binary search",
+                        "Insertion",
+                        "Tree traversal",
+                        "Heapify"
+                    ],
+        "correctAnswer":  1,
+        "marks":  10
+    },
+    {
+        "round":  1,
+        "title":  "In Git, which command creates a new branch and switches to it?",
+        "options":  [
+                        "git branch -d",
+                        "git checkout -b",
+                        "git merge --new",
+                        "git branch --switch"
+                    ],
+        "correctAnswer":  1,
+        "marks":  10
+    },
+    {
+        "round":  1,
+        "title":  "Which normalization form removes partial dependency?",
+        "options":  [
+                        "1NF",
+                        "2NF",
+                        "3NF",
+                        "BCNF"
+                    ],
+        "correctAnswer":  1,
+        "marks":  10
+    },
+    {
+        "round":  1,
+        "title":  "What is the space complexity of recursive DFS in worst case?",
+        "options":  [
+                        "O(1)",
+                        "O(log n)",
+                        "O(h)",
+                        "O(n^2)"
+                    ],
+        "correctAnswer":  2,
+        "marks":  10
+    },
+    {
+        "round":  1,
+        "title":  "Which protocol is used for secure web communication?",
+        "options":  [
+                        "FTP",
+                        "SSH",
+                        "HTTPS",
+                        "SMTP"
+                    ],
+        "correctAnswer":  2,
+        "marks":  10
+    },
+    {
+        "round":  1,
+        "title":  "In JavaScript, which method converts JSON string to object?",
+        "options":  [
+                        "JSON.stringify()",
+                        "JSON.parse()",
+                        "JSON.object()",
+                        "JSON.decode()"
+                    ],
+        "correctAnswer":  1,
+        "marks":  10
+    }
+]
