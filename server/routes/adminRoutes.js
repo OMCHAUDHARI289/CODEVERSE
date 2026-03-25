@@ -8,11 +8,11 @@ import {
   getTeamMonitor,
   rejectLifelineRequest
 } from "../controllers/adminController.js";
-import { isAdmin, protect } from "../middleware/authMiddleware.js";
+import { protectAdmin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.use(protect, isAdmin);
+router.use(protectAdmin);
 
 router.get("/dashboard-summary", getDashboardSummary);
 router.get("/team-monitor", getTeamMonitor);

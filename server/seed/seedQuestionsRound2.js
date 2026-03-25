@@ -5,6 +5,7 @@ import { readFile } from "fs/promises";
 import Question from "../models/questions.js";
 
 const { MONGO_URI } = process.env;
+const MIN_VISIBLE_TEST_CASES = 3;
 
 const loadQuestions = async () => {
   const fileUrl = new URL("./data/questions_round2.json", import.meta.url);
@@ -31,8 +32,13 @@ const validateQuestion = (question) => {
     throw new Error("Round2 question requires difficulty");
   }
 
-  if (!Array.isArray(question.visibleTestCases) || !question.visibleTestCases.length) {
-    throw new Error(`Round2 question "${question.title}" requires visible test cases`);
+  if (
+    !Array.isArray(question.visibleTestCases) ||
+    question.visibleTestCases.length < MIN_VISIBLE_TEST_CASES
+  ) {
+    throw new Error(
+      `Round2 question "${question.title}" requires at least ${MIN_VISIBLE_TEST_CASES} visible test cases`
+    );
   }
 };
 

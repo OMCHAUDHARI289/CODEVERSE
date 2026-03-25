@@ -1,4 +1,5 @@
 import Question from "../models/questions.js";
+import Team from "../models/teams.js";
 import AppError from "../utils/appError.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { ROUND_CONFIG } from "../config/roundConfig.js";
@@ -114,13 +115,13 @@ const getStatusPayload = async (team) => {
    CONTROLLERS
 ────────────────────────────── */
 
+// STATUS
 export const getRound1Status = asyncHandler(async (req, res) => {
   const payload = await getStatusPayload(req.team);
   res.json(payload);
 });
 
-/* ────────────────────────────── */
-
+// START
 export const startRound1 = asyncHandler(async (req, res) => {
   const team = req.team;
 
@@ -135,28 +136,31 @@ export const startRound1 = asyncHandler(async (req, res) => {
   ensureRuntime(team);
   const runtime = team.roundRuntime.round1;
 
-  if (!runtime.questionOrder.length) {
-    const questions = await Question.find({ round: 1 });
-
-    if (!questions.length) {
-      throw new AppError("No questions found", 404);
-    }
-
-    const shuffled = shuffle(questions);
-
-    runtime.questionOrder = shuffled.map(q => q._id);
-    runtime.startedAt = new Date();
-    runtime.warningCount = 0;
-
-    await team.save();
+  // Prevent restart
+  if (runtime.startedAt) {
+    const payload = await getStatusPayload(team);
+    return res.json(payload);
   }
+
+  const questions = await Question.find({ round: 1 });
+
+  if (!questions.length) {
+    throw new AppError("No questions found", 404);
+  }
+
+  const shuffled = shuffle(questions);
+
+  runtime.questionOrder = shuffled.map(q => q._id);
+  runtime.startedAt = new Date();
+  runtime.warningCount = 0;
+
+  await team.save();
 
   const payload = await getStatusPayload(team);
   res.json(payload);
 });
 
-/* ────────────────────────────── */
-
+// QUESTIONS
 export const getRound1Questions = asyncHandler(async (req, res) => {
   const team = req.team;
 
@@ -180,8 +184,7 @@ export const getRound1Questions = asyncHandler(async (req, res) => {
   res.json(ordered.map(sanitizeQuestion));
 });
 
-/* ────────────────────────────── */
-
+// WARNING
 export const addRound1Warning = asyncHandler(async (req, res) => {
   const team = req.team;
 
@@ -192,8 +195,15 @@ export const addRound1Warning = asyncHandler(async (req, res) => {
   ensureRuntime(team);
   const runtime = team.roundRuntime.round1;
 
-  runtime.warningCount += 1;
+  if (runtime.warningCount >= ROUND1.maxWarnings) {
+    return res.json({
+      warningCount: runtime.warningCount,
+      maxWarnings: ROUND1.maxWarnings,
+      shouldAutoSubmit: true
+    });
+  }
 
+  runtime.warningCount += 1;
   await team.save();
 
   res.json({
@@ -203,18 +213,13 @@ export const addRound1Warning = asyncHandler(async (req, res) => {
   });
 });
 
-/* ────────────────────────────── */
-
+// SUBMIT
 export const submitRound1 = asyncHandler(async (req, res) => {
   const team = req.team;
   const { answers, autoSubmit } = req.body;
 
   if (team.currentRound !== 1) {
     throw new AppError("Not allowed", 403);
-  }
-
-  if (team.submissions?.round1?.isSubmitted) {
-    throw new AppError("Already submitted", 400);
   }
 
   if (!Array.isArray(answers)) {
@@ -232,8 +237,14 @@ export const submitRound1 = asyncHandler(async (req, res) => {
     (Date.now() - new Date(runtime.startedAt).getTime()) / 1000
   );
 
-  if (elapsed > ROUND1.durationSeconds && !autoSubmit) {
+  const isTimeOver = elapsed > ROUND1.durationSeconds;
+
+  if (isTimeOver && !autoSubmit) {
     throw new AppError("Time is over", 400);
+  }
+
+  if (autoSubmit && runtime.warningCount < ROUND1.maxWarnings && !isTimeOver) {
+    throw new AppError("Invalid auto submit", 400);
   }
 
   const questions = await buildOrderedQuestions(runtime.questionOrder);
@@ -268,21 +279,31 @@ export const submitRound1 = asyncHandler(async (req, res) => {
     return val;
   });
 
-  team.scores.round1 = score;
-  team.totalScore = (team.totalScore || 0) + score;
+  // ✅ ATOMIC SUBMIT (prevents double submission)
+  const updated = await Team.findOneAndUpdate(
+    {
+      _id: team._id,
+      "submissions.round1.isSubmitted": { $ne: true }
+    },
+    {
+      $set: {
+        "submissions.round1": {
+          answers: normalized,
+          isSubmitted: true,
+          submittedAt: new Date(),
+          score,
+          correctCount
+        },
+        "scores.round1": score,
+        currentRound: 2
+      }
+    },
+    { new: true }
+  );
 
-  team.submissions = team.submissions || {};
-  team.submissions.round1 = {
-    answers: normalized,
-    isSubmitted: true,
-    submittedAt: new Date(),
-    score,
-    correctCount
-  };
-
-  team.currentRound = 2;
-
-  await team.save();
+  if (!updated) {
+    throw new AppError("Already submitted", 400);
+  }
 
   res.json({
     message: "Round 1 submitted",

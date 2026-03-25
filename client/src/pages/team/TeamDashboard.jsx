@@ -15,7 +15,7 @@ const DASHBOARD_POLL_INTERVAL_MS = 20000;
 const RULES = [
   { n:"01", title:"Linear Progression",  accent:"#38bdf8", body:"You cannot return to a previous round once you proceed. Plan your submissions carefully." },
   { n:"02", title:"Timer Constraints",   accent:"#a78bfa", body:"The global timer runs continuously. Depletion results in immediate session termination." },
-  { n:"03", title:"Lifeline Mechanics",  accent:"#fb923c", body:"Activating the lifeline costs an automatic −10 point penalty. Use only when critical." },
+  { n:"03", title:"Lifeline Mechanics",  accent:"#fb923c", body:"Two lifelines are available in Round 2 and Round 3 after 15 minutes. Approved requests deduct 10 points in Round 2 and 20 points in Round 3." },
   { n:"04", title:"Session Integrity",   accent:"#34d399", body:"Ungraceful disconnection flags your team for review. Maintain stable connection." },
 ];
 
@@ -357,24 +357,46 @@ export default function TeamDashboard() {
     }
     if (team.currentRound===2) return { label:"Open Round 2",   to:"/team/round2",      disabled:false, helper:"Coding round active."     };
     if (team.currentRound===3) return { label:"Open Round 3",   to:"/team/round3",      disabled:false, helper:"Final debugging round."   };
-    return                          { label:"Open Leaderboard", to:"/team/leaderboard", disabled:false, helper:"Competition complete."     };
+    // FIX: After all rounds, show leaderboard
+    return                          { label:"View Leaderboard", to:"/team/leaderboard", disabled:false, helper:"All rounds completed."     };
   }, [eventLive, round1, team.currentRound]);
 
   const stats = useMemo(() => [
     { label:"Current Round", value:`R${team.currentRound}`, accent:"#38bdf8", sub:getRoundTitle(team.currentRound) },
     { label:"Total Score",   value:String(team.totalScore), accent:"#34d399", sub:"Live from backend" },
-    { label:"Round 1 Score", value:`${team.scores?.round1||0}/${ROUND_CONFIG.round1.maxScore}`, accent:"#a78bfa", sub:"MCQ Arena" },
+    // FIX: Show only PREVIOUS round score, not current round
+    { label:"Previous Round Score", value:team.currentRound === 1 ? "0/0" : (team.currentRound === 2 ? `${team.scores?.round1||0}/${ROUND_CONFIG.round1.maxScore}` : `${team.scores?.round2||0}/${ROUND_CONFIG.round2.maxScore}`), accent:"#a78bfa", sub:team.currentRound === 1 ? "N/A" : (team.currentRound === 2 ? "Round 1 Score" : "Round 2 Score") },
     { label:"Event Status",  value:eventLive?"Live":"Standby", accent:eventLive?"#22c55e":"#fb923c", sub:eventLive?"Rounds available":"Waiting for admin" },
-  ], [eventLive, team.currentRound, team.scores?.round1, team.totalScore]);
+  ], [eventLive, team.currentRound, team.scores?.round1, team.scores?.round2, team.totalScore]);
 
   const rounds = useMemo(() => {
     const c = team.currentRound;
-    return [
+    const roundsArray = [
       { code:"R1", label:"MCQ Arena",      accent:"#38bdf8", points:ROUND_CONFIG.round1.maxScore, status:c>1||round1.submitted?"done":c===1?"active":"locked" },
-      { code:"R2", label:"Coding Engine",  accent:"#a78bfa", points:ROUND_CONFIG.round2.maxScore, status:c>2?"done":c===2?"active":"locked" },
-      { code:"R3", label:"Bug Hunter",     accent:"#34d399", points:ROUND_CONFIG.round3.maxScore, status:c>3?"done":c===3?"active":"locked" },
-      { code:"LB", label:"Leaderboard",   accent:"#f472b6", points:null,                          status:eventLive?"active":"locked" },
     ];
+    
+    // FIX: Show rounds sequentially as team progresses
+    if (c >= 2) {
+      roundsArray.push(
+        { code:"R2", label:"Coding Engine",  accent:"#a78bfa", points:ROUND_CONFIG.round2.maxScore, status:c>2?"done":c===2?"active":"locked" }
+      );
+    }
+    
+    if (c >= 3) {
+      roundsArray.push(
+        { code:"R3", label:"Bug Hunter",     accent:"#34d399", points:ROUND_CONFIG.round3.maxScore, status:c>3?"done":c===3?"active":"locked" }
+      );
+    }
+    
+    // FIX: Only show leaderboard when event is live AND team has reached at least round 3
+    // This means they've completed rounds 1 and 2
+    if (eventLive && c >= 3) {
+      roundsArray.push(
+        { code:"LB", label:"Leaderboard",   accent:"#f472b6", points:null, status:c>3?"active":"active" }
+      );
+    }
+    
+    return roundsArray;
   }, [eventLive, round1.submitted, team.currentRound]);
 
   const members = team.members.length

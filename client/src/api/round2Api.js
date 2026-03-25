@@ -12,6 +12,11 @@ export const startRound2SubA = async (payload) => {
   return data;
 };
 
+export const runRound2SubA = async (payload) => {
+  const { data } = await httpClient.post(`${ROUND2_BASE}/run-subA`, payload);
+  return data;
+};
+
 export const submitRound2SubA = async (payload) => {
   const { data } = await httpClient.post(`${ROUND2_BASE}/submit-subA`, payload);
   return data;
@@ -19,6 +24,11 @@ export const submitRound2SubA = async (payload) => {
 
 export const startRound2SubB = async (payload) => {
   const { data } = await httpClient.post(`${ROUND2_BASE}/start-subB`, payload);
+  return data;
+};
+
+export const runRound2SubB = async (payload) => {
+  const { data } = await httpClient.post(`${ROUND2_BASE}/run-subB`, payload);
   return data;
 };
 

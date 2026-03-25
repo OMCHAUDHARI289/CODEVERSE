@@ -259,7 +259,7 @@ export default function LifelinePage() {
   const [statusFilter,  setStatusFilter]  = useState("pending");
   const [requests,      setRequests]      = useState([]);
   const [pendingCount,  setPendingCount]  = useState(0);
-  const [penaltyPoints, setPenaltyPoints] = useState(10);
+  const [penaltyConfig, setPenaltyConfig] = useState({ perRound: { round2: 10, round3: 20 } });
   const [busyIds,       setBusyIds]       = useState([]);
   const [pulse,         setPulse]         = useState(false);
 
@@ -269,7 +269,7 @@ export default function LifelinePage() {
       const data = await getLifelineRequests(statusFilter);
       setRequests(Array.isArray(data?.requests) ? data.requests : []);
       setPendingCount(Number(data?.pendingCount) || 0);
-      setPenaltyPoints(Number(data?.penaltyPoints) || 10);
+      setPenaltyConfig(data?.penaltyConfig || { perRound: { round2: 10, round3: 20 } });
       setError("");
       if (silent) { setPulse(true); setTimeout(()=>setPulse(false), 600); }
     } catch (err) {
@@ -337,7 +337,7 @@ export default function LifelinePage() {
             <p style={{ fontSize:"12.5px", color:"rgba(203,213,225,0.55)",
               marginTop:"5px", fontFamily:"'Inter',sans-serif" }}>
               Admin approval applies a{" "}
-              <span style={{ color:"#f472b6", fontWeight:600 }}>−{penaltyPoints} point penalty</span>.
+              <span style={{ color:"#f472b6", fontWeight:600 }}>−{penaltyConfig?.perRound?.round2 ?? 10} / R3 -{penaltyConfig?.perRound?.round3 ?? 20}</span>.
             </p>
           </div>
 
@@ -441,7 +441,7 @@ export default function LifelinePage() {
               {requests.length} request{requests.length!==1?"s":""} · {statusFilter}
             </span>
             <span style={{ ...lbl, fontSize:"8px", color:"rgba(100,116,139,0.4)" }}>
-              −{penaltyPoints} pts penalty
+              −{penaltyConfig?.perRound?.round2 ?? 10} pts · R3 -{penaltyConfig?.perRound?.round3 ?? 20} pts
             </span>
           </div>
 

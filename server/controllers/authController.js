@@ -45,6 +45,26 @@ const mapTeamPayload = (team) => ({
         score: team.submissions?.round2?.subB?.score || 0,
         passed: Boolean(team.submissions?.round2?.subB?.passed)
       }
+    },
+    round3: {
+      isStarted: Boolean(team.submissions?.round3?.isStarted),
+      isSubmitted: Boolean(team.submissions?.round3?.isSubmitted),
+      selectedLanguage: team.submissions?.round3?.selectedLanguage || null,
+      score: team.submissions?.round3?.score || 0,
+      rawScore:
+        team.submissions?.round3?.rawScore ||
+        team.submissions?.round3?.score ||
+        0,
+      penaltyPoints: team.submissions?.round3?.penaltyPoints || 0,
+      usedLifelines: team.submissions?.round3?.usedLifelines || 0,
+      fixedBugs: team.submissions?.round3?.fixedBugs || 0,
+      totalBugs: team.submissions?.round3?.totalBugs || 0,
+      warnings: team.submissions?.round3?.warnings || 0,
+      runCount: team.submissions?.round3?.runCount || 0,
+      isSuspicious: Boolean(team.submissions?.round3?.isSuspicious),
+      submitReason: team.submissions?.round3?.submitReason || "",
+      startedAt: team.submissions?.round3?.startedAt || null,
+      submittedAt: team.submissions?.round3?.submittedAt || null
     }
   }
 });

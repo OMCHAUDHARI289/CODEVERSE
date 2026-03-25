@@ -1,10 +1,13 @@
 import Question from "../models/questions.js";
 import { ROUND_CONFIG } from "../config/roundConfig.js";
 import AppError from "../utils/appError.js";
-import { executeWithJudge0 } from "./judge0Service.js";
+import { executeCode } from "./executorService.js";
+import { analyzeCode } from "./aiService.js";
+import { wrapCode } from "../utils/wrapCode.js";
 
 const ROUND2 = ROUND_CONFIG.round2;
 const SUB_KEYS = ["subA", "subB"];
+const MIN_VISIBLE_TEST_CASES = 3;
 
 const DEFAULT_STARTER = {
   cpp: `#include <bits/stdc++.h>
@@ -35,6 +38,61 @@ public class Main {
 const normalizeWhitespace = (value = "") =>
   String(value).replace(/\r\n/g, "\n").trim();
 
+const safeJsonParse = (value = "") => {
+  const normalized = normalizeWhitespace(value);
+  if (!normalized) return null;
+  try {
+    return JSON.parse(normalized);
+  } catch {
+    return null;
+  }
+};
+
+const stableStringify = (value) => {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    const keys = Object.keys(value).sort();
+    return `{${keys
+      .map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+};
+
+const compareJson = (actual, expected, ignoreOrder) => {
+  if (Array.isArray(actual) && Array.isArray(expected)) {
+    if (actual.length !== expected.length) return false;
+    if (!ignoreOrder) {
+      return actual.every((item, index) =>
+        compareJson(item, expected[index], false)
+      );
+    }
+
+    const left = actual.map(stableStringify).sort();
+    const right = expected.map(stableStringify).sort();
+    return left.every((item, index) => item === right[index]);
+  }
+
+  if (
+    actual &&
+    expected &&
+    typeof actual === "object" &&
+    typeof expected === "object" &&
+    !Array.isArray(actual) &&
+    !Array.isArray(expected)
+  ) {
+    const leftKeys = Object.keys(actual).sort();
+    const rightKeys = Object.keys(expected).sort();
+    if (leftKeys.length !== rightKeys.length) return false;
+    if (!leftKeys.every((key, index) => key === rightKeys[index])) return false;
+    return leftKeys.every((key) => compareJson(actual[key], expected[key], false));
+  }
+
+  return actual === expected;
+};
+
 const tokenizeAndSort = (value = "") =>
   normalizeWhitespace(value)
     .split(/\s+/)
@@ -42,6 +100,13 @@ const tokenizeAndSort = (value = "") =>
     .sort();
 
 const compareOutput = ({ actual, expected, ignoreOrder }) => {
+  const parsedActual = safeJsonParse(actual);
+  const parsedExpected = safeJsonParse(expected);
+
+  if (parsedActual !== null && parsedExpected !== null) {
+    return compareJson(parsedActual, parsedExpected, ignoreOrder);
+  }
+
   if (ignoreOrder) {
     const actualTokens = tokenizeAndSort(actual);
     const expectedTokens = tokenizeAndSort(expected);
@@ -103,7 +168,7 @@ const getQuestionTestCases = (question) => {
   const visible = Array.isArray(question.visibleTestCases) && question.visibleTestCases.length
     ? question.visibleTestCases
     : Array.isArray(question.testCases)
-      ? question.testCases.slice(0, 2)
+      ? question.testCases.slice(0, MIN_VISIBLE_TEST_CASES)
       : [];
 
   const hidden = Array.isArray(question.hiddenTestCases)
@@ -179,6 +244,13 @@ const publicSubPayload = (sub) => ({
   isSubmitted: Boolean(sub.isSubmitted),
   passed: Boolean(sub.passed),
   score: Number(sub.score) || 0,
+  baseScore: Number(sub.baseScore) || 0,
+  bonusPoints: Number(sub.bonusPoints) || 0,
+  passedCount: Number(sub.passedCount) || 0,
+  totalTests: Number(sub.totalTests) || 0,
+  visiblePassed: Number(sub.visiblePassed) || 0,
+  hiddenPassed: Number(sub.hiddenPassed) || 0,
+  hiddenTotal: Number(sub.hiddenTotal) || 0,
   startedAt: sub.startedAt || null,
   submittedAt: sub.submittedAt || null
 });
@@ -200,6 +272,127 @@ const recomputeTeamRound2Totals = (team) => {
   team.totalScore = prevTotal - prevRound2Score + nextRound2Score;
 };
 
+const getWrapperTemplate = (question, language) =>
+  question?.runnerTemplate?.[language] ||
+  question?.runnerTemplate?.default ||
+  "";
+
+const hasExecutionError = (execution) => {
+  const hasStderr = Boolean(normalizeWhitespace(execution.stderr));
+  const hasCompileOutput = Boolean(normalizeWhitespace(execution.compileOutput));
+  const nonZeroExit =
+    typeof execution.code === "number" && Number(execution.code) !== 0;
+  const hasSignal = Boolean(execution.signal);
+  return hasStderr || hasCompileOutput || nonZeroExit || hasSignal;
+};
+
+const buildExecutionStatus = (execution, passedByOutput) => {
+  if (hasExecutionError(execution)) return "Execution Error";
+  return passedByOutput ? "Accepted" : "Wrong Answer";
+};
+
+const buildCaseError = (execution) => {
+  if (normalizeWhitespace(execution.stderr)) return execution.stderr;
+  if (normalizeWhitespace(execution.compileOutput)) return execution.compileOutput;
+  if (execution.signal) return `Terminated by signal ${execution.signal}`;
+  if (typeof execution.code === "number" && Number(execution.code) !== 0) {
+    return `Exited with code ${execution.code}`;
+  }
+  return "";
+};
+
+const averageExecutionTime = (results) => {
+  const times = results
+    .map((item) =>
+      Number.isFinite(Number(item.time)) ? Number(item.time) : null
+    )
+    .filter((value) => value !== null);
+
+  if (!times.length) return null;
+  const avg = times.reduce((sum, value) => sum + value, 0) / times.length;
+  return Number(avg.toFixed(4));
+};
+
+const formatResultOutput = ({ visibleResults, hiddenSummary = null }) => {
+  const lines = visibleResults.map(
+    (item) =>
+      `Case ${item.index}: ${item.passed ? "PASSED" : "FAILED"} (${item.status})`
+  );
+
+  if (hiddenSummary && Number.isFinite(Number(hiddenSummary.total))) {
+    const hiddenPassed = Number(hiddenSummary.passed) || 0;
+    const hiddenTotal = Number(hiddenSummary.total) || 0;
+    lines.push(`Hidden tests passed: ${hiddenPassed}/${hiddenTotal}`);
+  }
+
+  return lines.join("\n");
+};
+
+export const calculateRound2Score = ({ difficulty, passedCount }) => {
+  const basePoints = Number(ROUND2.difficultyPoints[difficulty]) || 0;
+  const awardedChunks = Math.min(3, Math.max(0, Number(passedCount) || 0));
+
+  if (!awardedChunks) return 0;
+
+  return Math.min(basePoints, Math.round((basePoints * awardedChunks) / 3));
+};
+
+const getComplexityBonus = (timeComplexity = "") => {
+  const normalized = String(timeComplexity || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) return 0;
+  if (normalized.includes("o(1)")) return 30;
+  if (
+    /\bo\(\s*n\s*\+\s*m\s*\)/.test(normalized) ||
+    /\bo\(\s*m\s*\+\s*n\s*\)/.test(normalized) ||
+    /\bo\(\s*v\s*\+\s*e\s*\)/.test(normalized) ||
+    /\bo\(\s*e\s*\+\s*v\s*\)/.test(normalized)
+  ) {
+    return 20;
+  }
+  if (/n\s*log\s*n/.test(normalized)) return 15;
+  if (normalized.includes("log n") || normalized.includes("log(n)")) return 25;
+  if (normalized.includes("o(n)") || normalized === "n") return 20;
+  if (
+    normalized.includes("n^2") ||
+    normalized.includes("n2") ||
+    normalized.includes("n*n")
+  ) {
+    return 5;
+  }
+
+  return 0;
+};
+
+const buildSubmitMessage = ({
+  visiblePassedCount,
+  visibleTotal,
+  hiddenPassedCount,
+  hiddenTotal,
+  baseScore,
+  bonusPoints,
+  complexity
+}) => {
+  if (!visiblePassedCount && !hiddenPassedCount) {
+    return "Submission saved. No test cases passed, so no points were awarded.";
+  }
+
+  const passSummary = `Visible ${visiblePassedCount}/${visibleTotal}, hidden ${hiddenPassedCount}/${hiddenTotal}.`;
+
+  if (!complexity) {
+    return `Submission saved. ${passSummary} Base ${baseScore} points awarded. Bonus analysis is currently unavailable.`;
+  }
+
+  if (bonusPoints > 0) {
+    return `Submission saved. ${passSummary} Base ${baseScore} + bonus ${bonusPoints} points for ${complexity.timeComplexity}.`;
+  }
+
+  return `Submission saved. ${passSummary} Base ${baseScore} points awarded. Complexity detected as ${complexity.timeComplexity}; no bonus points for this tier.`;
+};
+
 const evaluateTestCases = async ({
   question,
   sourceCode,
@@ -213,39 +406,38 @@ const evaluateTestCases = async ({
     throw new AppError("Problem has no test cases", 500);
   }
 
-  const languageId = ROUND2.judge0.languageIds[language];
-  if (!languageId) {
-    throw new AppError("Judge0 language mapping missing", 500);
-  }
-
   const results = [];
   for (let index = 0; index < all.length; index += 1) {
     const testCase = all[index];
-    const execution = await executeWithJudge0({
-      sourceCode,
-      languageId,
-      stdin: testCase.input
+    const wrappedCode = wrapCode(sourceCode, testCase.input, {
+      wrapperTemplate: getWrapperTemplate(question, language)
+    });
+    const execution = await executeCode({
+      code: wrappedCode,
+      language,
+      input: testCase.input
     });
 
     const passedByOutput = compareOutput({
-      actual: execution.stdout,
+      actual: execution.output,
       expected: testCase.output,
       ignoreOrder: Boolean(testCase.ignoreOrder)
     });
 
-    const passed = execution.statusId === 3 && passedByOutput;
+    const runtimeFailed = hasExecutionError(execution);
+    const passed = !runtimeFailed && passedByOutput;
 
     results.push({
       index: index + 1,
       isHidden: index >= visible.length,
       passed,
-      status: execution.status,
+      status: buildExecutionStatus(execution, passedByOutput),
       time: execution.time,
-      actualOutput: normalizeWhitespace(execution.stdout),
+      actualOutput: normalizeWhitespace(execution.output),
       expectedOutput: normalizeWhitespace(testCase.output),
       stderr: execution.stderr,
       compileOutput: execution.compileOutput,
-      message: execution.message
+      error: buildCaseError(execution)
     });
   }
 
@@ -334,6 +526,26 @@ export const runOrSubmitSubRound = async ({
 
   const sub = getSubState(team, subKey);
 
+  // FIX #1: Run limit - prevent brute-force solving
+  const MAX_RUNS = 50;
+  if (mode === "run") {
+    sub.runCount = sub.runCount || 0;
+    if (sub.runCount >= MAX_RUNS) {
+      throw new AppError("Run limit exceeded", 400);
+    }
+    sub.runCount += 1;
+    sub.lastRunAt = new Date();
+  }
+
+  // FIX #2: Time limit check - prevent late submissions
+  const roundStart = team.submissions?.round2?.startedAt;
+  if (roundStart) {
+    const elapsed = (Date.now() - new Date(roundStart).getTime()) / 1000;
+    if (elapsed > ROUND2.durationSeconds) {
+      throw new AppError("Round 2 time is over", 400);
+    }
+  }
+
   if (!sub.isStarted || !sub.problemId) {
     throw new AppError(`${subKey.toUpperCase()} not started`, 400);
   }
@@ -344,6 +556,12 @@ export const runOrSubmitSubRound = async ({
 
   if (!code || !code.trim()) {
     throw new AppError("Code is required", 400);
+  }
+
+  // FIX #4: Code size limit - prevent abuse/crashes
+  const MAX_CODE_SIZE = 50000; // 50KB
+  if (code.length > MAX_CODE_SIZE) {
+    throw new AppError("Code too large", 400);
   }
 
   const question = await getRound2QuestionById(sub.problemId);
@@ -368,6 +586,8 @@ export const runOrSubmitSubRound = async ({
     return {
       mode,
       passed: visiblePassed,
+      averageExecutionTime: averageExecutionTime(visibleResults),
+      output: formatResultOutput({ visibleResults }),
       visible: {
         total: evaluation.visibleCount,
         passed: visibleResults.filter((item) => item.passed).length,
@@ -378,35 +598,126 @@ export const runOrSubmitSubRound = async ({
           time: item.time,
           actualOutput: item.actualOutput,
           expectedOutput: item.expectedOutput,
-          error: item.stderr || item.compileOutput || item.message || ""
+          error: item.error || item.stderr || item.compileOutput || ""
         }))
       }
     };
   }
 
-  const allPassed = evaluation.results.every((item) => item.passed);
-  const basePoints = ROUND2.difficultyPoints[sub.difficulty];
-  const score = allPassed ? basePoints : 0;
+  const totalPassed = evaluation.results.filter((item) => item.passed).length;
+  const totalTests = evaluation.results.length;
+  const visiblePassedCount = visibleResults.filter((item) => item.passed).length;
+  const hiddenPassedCount = hiddenResults.filter((item) => item.passed).length;
+  const allPassed = totalTests > 0 && totalPassed === totalTests;
+  const resolvedDifficulty = sub.difficulty || question.difficulty;
+  const baseScore = calculateRound2Score({
+    difficulty: resolvedDifficulty,
+    passedCount: visiblePassedCount
+  });
+
+  const complexity = totalPassed > 0 ? await analyzeCode(code) : null;
+  const rawBonus =
+    totalPassed > 0 && complexity?.timeComplexity
+      ? getComplexityBonus(complexity.timeComplexity)
+      : 0;
+  const bonusPoints = Math.min(rawBonus, ROUND2.maxComplexityBonus || 0);
+  const score = baseScore + bonusPoints;
+  const complexityPayload = {
+    timeComplexity: complexity?.timeComplexity || "N/A",
+    spaceComplexity: complexity?.spaceComplexity || "N/A",
+    explanation:
+      complexity?.explanation ||
+      (totalPassed > 0
+        ? "AI complexity analysis is currently unavailable."
+        : "Complexity is evaluated only after at least one test case passes.")
+  };
+  const message = buildSubmitMessage({
+    visiblePassedCount,
+    visibleTotal: visible.length,
+    hiddenPassedCount,
+    hiddenTotal: hidden.length,
+    baseScore,
+    bonusPoints,
+    complexity
+  });
 
   sub.code = code;
+  if (!sub.difficulty && resolvedDifficulty) {
+    sub.difficulty = resolvedDifficulty;
+  }
   sub.passed = allPassed;
+  sub.baseScore = baseScore;
+  sub.bonusPoints = bonusPoints;
+  sub.passedCount = totalPassed;
+  sub.totalTests = totalTests;
+  sub.visiblePassed = visiblePassedCount;
+  sub.hiddenPassed = hiddenPassedCount;
+  sub.hiddenTotal = hidden.length;
   sub.score = score;
   sub.isSubmitted = true;
   sub.submittedAt = new Date();
 
-  if (team.submissions.round2.subA.isSubmitted && team.submissions.round2.subB.isSubmitted) {
-    team.submissions.round2.submittedAt = new Date();
-    team.currentRound = Math.max(team.currentRound, 3);
+  // FIX #5: Atomic submit - prevent race conditions and double scoring
+  const updated = await team.constructor.findOneAndUpdate(
+    {
+      _id: team._id,
+      [`submissions.round2.${subKey}.isSubmitted`]: { $ne: true }
+    },
+    {
+      $set: {
+        [`submissions.round2.${subKey}.code`]: code,
+        [`submissions.round2.${subKey}.passed`]: allPassed,
+        [`submissions.round2.${subKey}.baseScore`]: baseScore,
+        [`submissions.round2.${subKey}.bonusPoints`]: bonusPoints,
+        [`submissions.round2.${subKey}.passedCount`]: totalPassed,
+        [`submissions.round2.${subKey}.totalTests`]: totalTests,
+        [`submissions.round2.${subKey}.visiblePassed`]: visiblePassedCount,
+        [`submissions.round2.${subKey}.hiddenPassed`]: hiddenPassedCount,
+        [`submissions.round2.${subKey}.hiddenTotal`]: hidden.length,
+        [`submissions.round2.${subKey}.score`]: score,
+        [`submissions.round2.${subKey}.isSubmitted`]: true,
+        [`submissions.round2.${subKey}.submittedAt`]: new Date(),
+        [`submissions.round2.${subKey}.runCount`]: sub.runCount,
+        [`submissions.round2.${subKey}.lastRunAt`]: sub.lastRunAt
+      }
+    },
+    { new: true }
+  );
+
+  if (!updated) {
+    throw new AppError("Already submitted", 400);
   }
 
-  recomputeTeamRound2Totals(team);
-  await team.save();
+  // Check if both subs are now submitted and advance round
+  if (updated.submissions.round2.subA.isSubmitted && updated.submissions.round2.subB.isSubmitted) {
+    if (!updated.submissions.round2.submittedAt) {
+      updated.submissions.round2.submittedAt = new Date();
+      updated.currentRound = Math.max(updated.currentRound, 3);
+      await updated.save();
+    }
+  }
+
+  // Recompute totals using updated doc
+  recomputeTeamRound2Totals(updated);
+  await updated.save();
 
   return {
     mode,
     subKey,
     passed: allPassed,
     score,
+    baseScore,
+    bonusPoints,
+    message,
+    complexity: complexityPayload,
+    averageExecutionTime: averageExecutionTime(evaluation.results),
+    output: formatResultOutput({
+      visibleResults,
+      hiddenSummary: {
+        passed: hiddenResults.filter((item) => item.passed).length,
+        total: hidden.length
+      }
+    }),
     visible: {
       total: visible.length,
       passed: visibleResults.filter((item) => item.passed).length,
@@ -417,14 +728,14 @@ export const runOrSubmitSubRound = async ({
         time: item.time,
         actualOutput: item.actualOutput,
         expectedOutput: item.expectedOutput,
-        error: item.stderr || item.compileOutput || item.message || ""
+        error: item.error || item.stderr || item.compileOutput || ""
       }))
     },
     hidden: {
       total: hidden.length,
       passed: hiddenResults.filter((item) => item.passed).length
     },
-    round2TotalScore: team.submissions.round2.totalScore
+    round2TotalScore: updated.submissions.round2.totalScore
   };
 };
 
@@ -442,6 +753,7 @@ export const getRound2ResultPayload = async (team) => {
   return {
     round: 2,
     maxScore: ROUND2.maxScore,
+    maxComplexityBonus: ROUND2.maxComplexityBonus || 0,
     difficultyPoints: ROUND2.difficultyPoints,
     allowedLanguages: ROUND2.allowedLanguages,
     startedAt: round2.startedAt || null,

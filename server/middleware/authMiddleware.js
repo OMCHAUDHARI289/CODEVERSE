@@ -1,72 +1,134 @@
-import jwt from "jsonwebtoken";
 import Team from "../models/teams.js";
 import Admin from "../models/admin.js";
 import AppError from "../utils/appError.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import jwt from "jsonwebtoken";
 
-const getTokenFromHeader = (req) => {
-  const authHeader = req.headers.authorization || "";
-  if (authHeader.startsWith("Bearer ")) {
-    return authHeader.slice(7).trim();
-  }
-  return null;
-};
-
-export const protect = asyncHandler(async (req, res, next) => {
-  const token = getTokenFromHeader(req);
+// =======================
+// 🔐 JWT VERIFICATION
+// =======================
+export const verifyJWT = asyncHandler(async (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
 
   if (!token) {
-    throw new AppError("Not authorized, no token", 401);
+    throw new AppError("No token provided", 401);
   }
 
-  let decoded;
+  if (!process.env.JWT_SECRET) {
+    throw new AppError("JWT secret not configured", 500);
+  }
 
   try {
-    decoded = jwt.verify(token, process.env.JWT_SECRET);
-  } catch {
-    throw new AppError("Token expired or invalid", 401);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    throw new AppError("Invalid or expired token", 401);
   }
-
-  if (!decoded?.id || !decoded?.role) {
-    throw new AppError("Invalid token payload", 401);
-  }
-
-  req.user = {
-    id: decoded.id,
-    role: decoded.role
-  };
-
-  next();
 });
 
-export const isTeam = asyncHandler(async (req, res, next) => {
-  if (req.user.role !== "team") {
-    throw new AppError("Team access only", 403);
+// =======================
+// 🔐 TEAM PROTECT
+// =======================
+export const protectTeam = asyncHandler(async (req, res, next) => {
+  // First try JWT verification from Authorization header
+  const token = req.headers.authorization?.split(" ")[1];
+
+  if (token) {
+    if (!process.env.JWT_SECRET) {
+      throw new AppError("JWT secret not configured", 500);
+    }
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded;
+
+      // If JWT user is a team, fetch and set req.team
+      if (decoded.role === "team") {
+        const team = await Team.findById(decoded.id);
+        if (!team) {
+          throw new AppError("Team not found", 404);
+        }
+        req.team = team;
+      }
+      return next();
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError("Invalid or expired token", 401);
+    }
   }
 
-  const team = await Team.findById(req.user.id).select("-password");
+  // Fallback to teamId from headers/body/query for legacy support
+  const teamId =
+    req.headers["x-team-id"] ||
+    req.body?.teamId ||
+    req.query?.teamId;
+
+  if (!teamId) {
+    throw new AppError("teamId required in headers (x-team-id), body, or query", 401);
+  }
+
+  const team = await Team.findOne({ teamId: String(teamId).trim() });
 
   if (!team) {
     throw new AppError("Team not found", 404);
   }
 
+  if (!team.isLoggedIn) {
+    throw new AppError("Session expired. Please login again.", 401);
+  }
+
   req.team = team;
+  next();
+});
+
+export const isTeam = asyncHandler(async (req, res, next) => {
+  if (!req.team && !req.user) {
+    throw new AppError("Team not authenticated", 401);
+  }
 
   next();
 });
 
-export const isAdmin = asyncHandler(async (req, res, next) => {
-  if (req.user.role !== "admin") {
-    throw new AppError("Admin access only", 403);
+export const protectAdmin = asyncHandler(async (req, res, next) => {
+  // First try JWT verification from Authorization header
+  const token = req.headers.authorization?.split(" ")[1];
+
+  if (token) {
+    if (!process.env.JWT_SECRET) {
+      throw new AppError("JWT secret not configured", 500);
+    }
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded;
+
+      // If JWT user is an admin, fetch and set req.admin
+      if (decoded.role === "admin") {
+        const admin = await Admin.findById(decoded.id);
+        if (!admin) {
+          throw new AppError("Admin not found", 404);
+        }
+        req.admin = admin;
+      }
+      return next();
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError("Invalid or expired token", 401);
+    }
   }
 
-  const admin = await Admin.findById(req.user.id).select("-password");
+  // Fallback to email-based (legacy support)
+  const { email } = req.body;
+
+  if (!email) {
+    throw new AppError("Admin email required or provide JWT token", 401);
+  }
+
+  const admin = await Admin.findOne({ email: email.trim().toLowerCase() });
 
   if (!admin) {
     throw new AppError("Admin not found", 404);
   }
 
   req.admin = admin;
-
   next();
 });

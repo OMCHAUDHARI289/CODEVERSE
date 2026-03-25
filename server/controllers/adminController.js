@@ -4,7 +4,11 @@ import LifelineRequest from "../models/lifelineRequest.js";
 import Question from "../models/questions.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import AppError from "../utils/appError.js";
-import { applyLifelinePenaltyToTeam, getLifelinePenalty } from "./lifelineController.js";
+import {
+  applyLifelinePenaltyToTeam,
+  getLifelinePenalty,
+  getLifelinePenaltyConfig
+} from "./lifelineController.js";
 import { getLeaderboardData } from "../services/leaderboardService.js";
 
 const MAX_ACTIVITY_ITEMS = 8;
@@ -295,11 +299,15 @@ export const getTeamMonitor = asyncHandler(async (req, res) => {
     const round = getRoundCode(team.currentRound);
     const lifecycleStatus = getTeamLifecycleStatus(team);
     const latestRequest = latestRequestByTeam.get(String(team._id)) || null;
-    const lifelineUsed = Boolean(team?.lifelines?.round2Used || team?.lifelines?.round3Used);
+    const round2Usage =
+      Number(team?.lifelines?.round2UsedCount) || (team?.lifelines?.round2Used ? 1 : 0);
+    const round3Usage =
+      Number(team?.lifelines?.round3UsedCount) || (team?.lifelines?.round3Used ? 1 : 0);
+    const lifelineUsed = round2Usage > 0 || round3Usage > 0;
 
     let lifelineState = "Available";
-    if (lifelineUsed) lifelineState = "Used";
-    else if (latestRequest?.status === "pending") lifelineState = "Pending";
+    if (latestRequest?.status === "pending") lifelineState = "Pending";
+    else if (lifelineUsed) lifelineState = "Used";
     else if (latestRequest?.status === "rejected") lifelineState = "Rejected";
 
     return {
@@ -318,6 +326,10 @@ export const getTeamMonitor = asyncHandler(async (req, res) => {
       },
       status: lifecycleStatus,
       lifeline: lifelineState,
+      lifelineUsage: {
+        round2: round2Usage,
+        round3: round3Usage
+      },
       lifelineRequest: latestRequest,
       submissionStatus: getSubmissionStatus(team),
       isOnline: Boolean(team.isLoggedIn),
@@ -432,6 +444,7 @@ const parseLifelineStatusFilter = (status) => {
 const mapLifelineRequest = (request) => ({
   _id: request._id,
   round: request.round,
+  penaltyPoints: getLifelinePenalty(request.round),
   status: request.status,
   requestedAt: request.requestedAt,
   resolvedAt: request.resolvedAt || null,
@@ -461,7 +474,7 @@ export const getLifelineRequests = asyncHandler(async (req, res) => {
   const pendingCount = await LifelineRequest.countDocuments({ status: "pending" });
 
   res.json({
-    penaltyPoints: getLifelinePenalty(),
+    penaltyConfig: getLifelinePenaltyConfig(),
     pendingCount,
     requests: requests.map(mapLifelineRequest)
   });

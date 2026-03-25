@@ -25,12 +25,26 @@ export const ROUND_CONFIG = {
       hard: 50
     },
     allowedLanguages: ["cpp", "java"],
-    maxScore: 100
+    maxComplexityBonus: 30,
+    maxScore: 160,
+    routes: {
+      terms: "/team/round2/terms",
+      arena: "/team/round2/arena",
+      result: "/team/round2/result",
+      nextRound: "/team/round3/terms"
+    }
   },
   round3: {
     id: 3,
-    title: "Round 3 - Bug Hunter",
-    durationSeconds: 30 * 60,
-    maxScore: 250
+    title: "Round 3 - Bug Apocalypse",
+    durationSeconds: 60 * 60,
+    maxScore: 150,
+    routes: {
+      terms: "/team/round3/terms",
+      language: "/team/round3/language",
+      arena: "/team/round3/arena",
+      result: "/team/round3/result",
+      nextRound: "/team/leaderboard"
+    }
   }
 };

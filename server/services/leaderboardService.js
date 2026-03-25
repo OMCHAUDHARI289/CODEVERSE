@@ -8,9 +8,17 @@ const getRoundCode = (currentRoundValue) => {
 };
 
 const toLeaderboardRow = (team) => {
-  const totalScore = Number(team.totalScore) || 0;
+  const round1Score = Number(team?.scores?.round1) || 0;
+  const round2Score = Number(team?.scores?.round2) || 0;
+  const round3Score = Number(team?.scores?.round3) || 0;
+  const scoreFromRounds = round1Score + round2Score + round3Score;
+  const storedTotal = Number(team.totalScore) || 0;
+  const totalScore =
+    scoreFromRounds > 0 || storedTotal === 0 ? scoreFromRounds : storedTotal;
   const currentRound = Number(team.currentRound) || 1;
-  const lifelineUsed = Boolean(team?.lifelines?.round2Used || team?.lifelines?.round3Used);
+  const round2Usage = Number(team?.lifelines?.round2UsedCount) || (team?.lifelines?.round2Used ? 1 : 0);
+  const round3Usage = Number(team?.lifelines?.round3UsedCount) || (team?.lifelines?.round3Used ? 1 : 0);
+  const lifelineUsed = round2Usage > 0 || round3Usage > 0;
 
   return {
     teamId: team.teamId,
@@ -19,12 +27,16 @@ const toLeaderboardRow = (team) => {
     round: getRoundCode(currentRound),
     currentRound,
     scores: {
-      round1: Number(team?.scores?.round1) || 0,
-      round2: Number(team?.scores?.round2) || 0,
-      round3: Number(team?.scores?.round3) || 0
+      round1: round1Score,
+      round2: round2Score,
+      round3: round3Score
     },
     isOnline: Boolean(team.isLoggedIn),
     lifelineUsed,
+    lifelineUsage: {
+      round2: round2Usage,
+      round3: round3Usage
+    },
     updatedAt: team.updatedAt || null
   };
 };

@@ -4,6 +4,8 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { logoutUser, getCurrentUser } from "../api/authApi";
 import { getEventStatus } from "../api/eventApi";
 import { getRound1Status } from "../api/round1Api";
+import { getRound2Result } from "../api/round2Api";
+import { fetchRound3Progress } from "../api/round3MockApi";
 import { clearAuthSession } from "../api/session";
 import { getApiErrorMessage } from "../api/httpClient";
 
@@ -22,7 +24,15 @@ const PAGE_TITLE = {
   "/team/round1/arena": "Round 1 - MCQ Arena",
   "/team/round1/result": "Round 1 - Result",
   "/team/round2": "Round 2 - Coding Engine",
-  "/team/round3": "Round 3 - Bug Hunter",
+  "/team/round2/terms": "Round 2 - Terms",
+  "/team/round2/arena": "Round 2 - Coding Engine",
+  "/team/round2/result": "Round 2 - Result",
+  "/team/round3": "Round 3 - Bug Apocalypse",
+  "/team/round3/terms": "Round 3 - Terms",
+  "/team/round3/language": "Round 3 - Language",
+  "/team/round3/arena": "Round 3 - Debugging Battle",
+  "/team/round3/result": "Round 3 - Result",
+  "/team/round3/editor": "Round 3 - Debugging Battle",
   "/team/leaderboard": "Live Leaderboard"
 };
 
@@ -78,6 +88,8 @@ export default function TeamLayout() {
 
   const [eventLive, setEventLive] = useState(false);
   const [round1State, setRound1State] = useState({ started: false, submitted: false });
+  const [round2State, setRound2State] = useState({ started: false, submitted: false, activeSub: null });
+  const [round3State, setRound3State] = useState({ started: false, submitted: false });
   const [loadingMeta, setLoadingMeta] = useState(true);
   const [metaError, setMetaError] = useState("");
 
@@ -127,6 +139,47 @@ export default function TeamLayout() {
         } else {
           setRound1State({ started: false, submitted: true });
         }
+
+        if (mergedTeam.currentRound >= 2) {
+          try {
+            const r2 = await getRound2Result();
+            if (!active) return;
+
+            const subAStarted = Boolean(r2?.subA?.isStarted);
+            const subASubmitted = Boolean(r2?.subA?.isSubmitted);
+            const subBStarted = Boolean(r2?.subB?.isStarted);
+            const subBSubmitted = Boolean(r2?.subB?.isSubmitted);
+            const r2Started = subAStarted || subBStarted;
+            const r2Submitted = subASubmitted && subBSubmitted;
+
+            setRound2State({
+              started: r2Started,
+              submitted: r2Submitted,
+              activeSub: r2?.activeSub || null
+            });
+          } catch {
+            if (!active) return;
+            setRound2State({ started: false, submitted: false, activeSub: null });
+          }
+        } else {
+          setRound2State({ started: false, submitted: false, activeSub: null });
+        }
+
+        if (mergedTeam.currentRound >= 3) {
+          try {
+            const r3 = await fetchRound3Progress();
+            if (!active) return;
+            setRound3State({
+              started: Boolean(r3?.isStarted),
+              submitted: Boolean(r3?.isSubmitted)
+            });
+          } catch {
+            if (!active) return;
+            setRound3State({ started: false, submitted: false });
+          }
+        } else {
+          setRound3State({ started: false, submitted: false });
+        }
       } catch (error) {
         if (!active) return;
         const cached = readCachedTeam();
@@ -159,18 +212,35 @@ export default function TeamLayout() {
 
   const hardLockToRound1 =
     team.currentRound === 1 && round1State.started && !round1State.submitted;
+  const isRound1Active = round1State.started && !round1State.submitted;
+  const isRound2Active = round2State.started && !round2State.submitted;
+  const isRound3Active = round3State.started && !round3State.submitted;
+  const activeRoundNumber = isRound1Active ? 1 : isRound2Active ? 2 : isRound3Active ? 3 : null;
+  const isAnyRoundActive = Boolean(activeRoundNumber);
 
   const isNavItemLocked = useMemo(
     () => (item) => {
+      // FIX: Only lock sidebar when actively ON a Round 3 page (not on result page)
+      // This ensures sidebar is only locked during active round attempts, not just because currentRound is 3
+      const isOnRound3Page = location.pathname.includes("/round3/") && !location.pathname.includes("/round3/result");
+      if (isOnRound3Page && !location.pathname.startsWith(item.path) && item.path !== "/team") {
+        return true;
+      }
+
       if (hardLockToRound1 && !item.path.startsWith(ROUND1_PATH_PREFIX)) {
         return true;
       }
+      // FIX: Sequential round progression - can't skip rounds
       if (item.minRound > team.currentRound) {
+        return true;
+      }
+      // FIX: Lock leaderboard until team reaches round 3 (completed rounds 1 & 2)
+      if (item.path === "/team/leaderboard" && team.currentRound < 3) {
         return true;
       }
       return false;
     },
-    [hardLockToRound1, team.currentRound]
+    [hardLockToRound1, team.currentRound, location.pathname]
   );
 
   useEffect(() => {
@@ -222,6 +292,19 @@ export default function TeamLayout() {
   }, [hardLockToRound1, loadingMeta, location.pathname, navigate]);
 
   const handleLogout = async () => {
+    if (activeRoundNumber === 1) {
+      setMetaError("Cannot logout while Round 1 is active. Please submit your answers first.");
+      return;
+    }
+    if (activeRoundNumber === 2) {
+      setMetaError("Cannot logout while Round 2 is active. Please submit your code first.");
+      return;
+    }
+    if (activeRoundNumber === 3) {
+      setMetaError("Cannot logout while Round 3 is active. Please submit your code first.");
+      return;
+    }
+
     try {
       await logoutUser();
     } catch {
@@ -518,7 +601,14 @@ export default function TeamLayout() {
             <button
               type="button"
               onClick={handleLogout}
-              title={!expanded ? "Logout" : undefined}
+              disabled={isAnyRoundActive}
+              title={
+                !expanded
+                  ? "Logout"
+                  : isAnyRoundActive
+                    ? `Logout disabled while Round ${activeRoundNumber} is active`
+                    : undefined
+              }
               style={{
                 width: "100%",
                 borderRadius: "11px",
@@ -527,11 +617,18 @@ export default function TeamLayout() {
                 alignItems: "center",
                 justifyContent: expanded ? "space-between" : "center",
                 gap: "10px",
-                background: "rgba(244,63,94,0.08)",
-                border: "1px solid rgba(244,63,94,0.22)",
-                color: "rgba(251,113,133,0.95)",
-                cursor: "pointer",
-                transition: "all 0.14s"
+                background: isAnyRoundActive
+                  ? "rgba(100,116,139,0.08)" 
+                  : "rgba(244,63,94,0.08)",
+                border: isAnyRoundActive
+                  ? "1px solid rgba(100,116,139,0.15)"
+                  : "1px solid rgba(244,63,94,0.22)",
+                color: isAnyRoundActive
+                  ? "rgba(100,116,139,0.5)"
+                  : "rgba(251,113,133,0.95)",
+                cursor: isAnyRoundActive ? "not-allowed" : "pointer",
+                transition: "all 0.14s",
+                opacity: isAnyRoundActive ? 0.6 : 1
               }}
             >
               <span style={{ width: "30px", height: "30px", borderRadius: "9px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700, letterSpacing: "0.05em", background: "rgba(244,63,94,0.15)", border: "1px solid rgba(244,63,94,0.28)" }}>
@@ -549,7 +646,7 @@ export default function TeamLayout() {
         </aside>
 
         <main style={{ flex: 1, minWidth: 0, overflowY: "auto", padding: "28px 24px", background: "#0d0f14" }}>
-          <div style={{ maxWidth: "1152px", margin: "0 auto" }}>
+          <div style={{ width: "100%" }}>
             {loadingMeta ? (
               <div style={{ padding: "18px 20px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)", fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(148,163,184,0.65)" }}>
                 Syncing team access...

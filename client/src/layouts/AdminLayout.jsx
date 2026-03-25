@@ -751,7 +751,7 @@ export default function AdminLayout() {
             background: "#0d0f14"
           }}
         >
-          <div style={{ maxWidth: "1152px", margin: "0 auto" }}>
+          <div style={{ width: "100%" }}>
             <Outlet />
           </div>
         </main>
