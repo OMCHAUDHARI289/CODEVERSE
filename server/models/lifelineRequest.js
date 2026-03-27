@@ -46,9 +46,9 @@ const lifelineRequestSchema = new mongoose.Schema(
 lifelineRequestSchema.index({ team: 1, round: 1, status: 1, requestedAt: -1 });
 lifelineRequestSchema.index({ status: 1, requestedAt: -1 });
 
-// 🚫 Prevent multiple pending requests per team per round
+// 🚫 Prevent multiple pending requests per team across both rounds
 lifelineRequestSchema.index(
-  { team: 1, round: 1, status: 1 },
+  { team: 1, status: 1 },
   { unique: true, partialFilterExpression: { status: "pending" } }
 );
 

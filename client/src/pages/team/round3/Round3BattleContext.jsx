@@ -11,6 +11,7 @@ import {
   fetchRound3BuggyCode,
   fetchRound3Progress,
   addRound3Warning,
+  requestRound3Hint,
   runRound3Debugging,
   submitRound3Debugging
 } from "../../../api/round3MockApi";
@@ -18,12 +19,23 @@ import { getApiErrorMessage } from "../../../api/httpClient";
 import { markLifelineRoundStart } from "../../../api/lifelineApi";
 import {
   ROUND3_DURATION_SECONDS,
+  ROUND3_HINT_COOLDOWN_SECONDS,
   ROUND3_POINTS_PER_BUG,
-  ROUND3_TOTAL_BUGS
+  ROUND3_TOTAL_BUGS,
+  getRound3Challenge
 } from "./round3ChallengeData";
 
 const Round3BattleContext = createContext(null);
 const ROUND3_MAX_WARNINGS = 3;
+const ROUND3_MAX_RUNS = 10;
+const defaultHintState = {
+  usedCount: 0,
+  revealedBugIds: [],
+  cooldownSeconds: ROUND3_HINT_COOLDOWN_SECONDS,
+  nextAvailableAt: null,
+  remainingSeconds: 0,
+  availableNow: true
+};
 
 const normalizeRound3Result = (payload, mode = "run") => {
   if (!payload) return null;
@@ -56,6 +68,18 @@ const normalizeRound3Result = (payload, mode = "run") => {
   };
 };
 
+const normalizeHintState = (payload) => ({
+  usedCount: Number(payload?.usedCount) || 0,
+  revealedBugIds: Array.isArray(payload?.revealedBugIds) ? payload.revealedBugIds : [],
+  cooldownSeconds: Number(payload?.cooldownSeconds) || ROUND3_HINT_COOLDOWN_SECONDS,
+  nextAvailableAt: payload?.nextAvailableAt || null,
+  remainingSeconds: Number(payload?.remainingSeconds) || 0,
+  availableNow:
+    typeof payload?.availableNow === "boolean"
+      ? payload.availableNow
+      : (Number(payload?.remainingSeconds) || 0) <= 0
+});
+
 export function Round3BattleProvider({ children }) {
   const [isHydrated, setIsHydrated] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -66,6 +90,7 @@ export function Round3BattleProvider({ children }) {
   const [roundStartedAt, setRoundStartedAt] = useState(null);
   const [warnings, setWarnings] = useState(0);
   const [isSuspicious, setIsSuspicious] = useState(false);
+  const [runCount, setRunCount] = useState(0);
   const [isChallengeLoading, setIsChallengeLoading] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,6 +100,7 @@ export function Round3BattleProvider({ children }) {
   const [statusMessage, setStatusMessage] = useState("");
   const [restrictionsEnabled, setRestrictionsEnabled] = useState(true);
   const [isRound3Active, setIsRound3Active] = useState(false); // FIX: Track if Round 3 ongoing
+  const [hintState, setHintState] = useState(defaultHintState);
   const autoSubmitLock = useRef(false);
 
   // ===== FIX: Restore Round 3 progress on mount =====
@@ -101,8 +127,10 @@ export function Round3BattleProvider({ children }) {
 
         setWarnings(Number(progress.warnings) || 0);
         setIsSuspicious(Boolean(progress.isSuspicious));
+        setRunCount(Number(progress.runCount) || 0);
         setRoundStartedAt(progress.startedAt || null);
         setChallengeMeta(progress.challenge || null);
+        setHintState(normalizeHintState(progress.hint));
 
         if (Number.isFinite(Number(progress.remainingSeconds))) {
           setTimeLeft(Math.max(0, Number(progress.remainingSeconds)));
@@ -199,6 +227,8 @@ export function Round3BattleProvider({ children }) {
 
       setWarnings(Number(payload.warnings) || 0);
       setIsSuspicious(Boolean(payload.isSuspicious));
+      setRunCount(Number(payload.runCount) || 0);
+      setHintState(normalizeHintState(payload.hint));
 
       if (payload.startedAt) {
         setRoundStartedAt(payload.startedAt);
@@ -252,6 +282,51 @@ export function Round3BattleProvider({ children }) {
     setCode(nextCode || "");
   }, []);
 
+  const resetCode = useCallback(() => {
+    if (!selectedLanguage) return;
+
+    const originalCode = challengeMeta?.code || getRound3Challenge(selectedLanguage).buggyCode;
+    setCode(originalCode);
+    setChallengeMeta((previous) =>
+      previous
+        ? {
+            ...previous,
+            code: originalCode
+          }
+        : previous
+    );
+    setRunResult(null);
+    setStatusMessage("Editor reset to the original buggy code.");
+  }, [challengeMeta?.code, selectedLanguage]);
+
+  const revealHint = useCallback(async () => {
+    if (!selectedLanguage || isRunning || isSubmitting || submitResult) return null;
+
+    setStatusMessage("");
+
+    try {
+      const payload = await requestRound3Hint({
+        language: selectedLanguage,
+        code
+      });
+      setCode(payload.code || "");
+      setHintState(normalizeHintState(payload.hint));
+      setChallengeMeta((previous) =>
+        previous
+          ? {
+              ...previous,
+              code: payload.code || previous.code
+            }
+          : previous
+      );
+      setStatusMessage("Hint added in the editor.");
+      return payload;
+    } catch (error) {
+      setStatusMessage(getApiErrorMessage(error, "Hint is not available right now."));
+      throw error;
+    }
+  }, [selectedLanguage, code, isRunning, isSubmitting, submitResult]);
+
   const runCode = useCallback(async () => {
     if (!selectedLanguage || isRunning || isSubmitting) return null;
 
@@ -265,6 +340,7 @@ export function Round3BattleProvider({ children }) {
       });
       const normalized = normalizeRound3Result(payload, "run");
       setRunResult(normalized);
+      setRunCount((previous) => previous + 1);
       setStatusMessage(
         `Run complete. ${normalized.passed}/${normalized.total} bugs fixed for ${normalized.score} marks.`
       );
@@ -368,6 +444,8 @@ export function Round3BattleProvider({ children }) {
       roundStartedAt,
       warnings,
       isSuspicious,
+      runCount,
+      maxRuns: ROUND3_MAX_RUNS,
       isChallengeLoading,
       isRunning,
       isSubmitting,
@@ -378,12 +456,15 @@ export function Round3BattleProvider({ children }) {
       restrictionsEnabled,
       liveProgress,
       isRound3Active,
+      hintState,
       totalBugs: ROUND3_TOTAL_BUGS,
       pointsPerBug: ROUND3_POINTS_PER_BUG,
       acceptTerms,
       loadChallenge,
       startTimer,
       updateCode,
+      resetCode,
+      revealHint,
       runCode,
       submitCode,
       registerTabSwitch,
@@ -400,6 +481,7 @@ export function Round3BattleProvider({ children }) {
       roundStartedAt,
       warnings,
       isSuspicious,
+      runCount,
       isChallengeLoading,
       isRunning,
       isSubmitting,
@@ -410,10 +492,13 @@ export function Round3BattleProvider({ children }) {
       restrictionsEnabled,
       liveProgress,
       isRound3Active,
+      hintState,
       acceptTerms,
       loadChallenge,
       startTimer,
       updateCode,
+      resetCode,
+      revealHint,
       runCode,
       submitCode,
       registerTabSwitch,

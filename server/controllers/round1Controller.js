@@ -292,7 +292,8 @@ export const submitRound1 = asyncHandler(async (req, res) => {
           isSubmitted: true,
           submittedAt: new Date(),
           score,
-          correctCount
+          correctCount,
+          timeSpentSeconds: Math.min(elapsed, ROUND1.durationSeconds)
         },
         "scores.round1": score,
         currentRound: 2

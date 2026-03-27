@@ -18,6 +18,7 @@ import {
 } from "../controllers/round2Controller.js";
 import {
   addRound3Warning,
+  getRound3Hint,
   getRound3Result,
   getRound3Status,
   runRound3,
@@ -47,6 +48,7 @@ router.get("/round2/result", getRound2Result);
 router.get("/round3/status", getRound3Status);
 router.post("/round3/start", startRound3);
 router.post("/round3/warn", addRound3Warning);
+router.post("/round3/hint", getRound3Hint);
 router.post("/round3/run", runRound3);
 router.post("/round3/submit", submitRound3);
 router.get("/round3/result", getRound3Result);

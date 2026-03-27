@@ -1,184 +1,137 @@
 [
-    {
-        "round":  1,
-        "title":  "What is the output of this code?",
-        "codeSnippet":  "console.log(typeof NaN)",
-        "options":  [
-                        "number",
-                        "NaN",
-                        "undefined",
-                        "object"
-                    ],
-        "correctAnswer":  0,
-        "marks":  10
-    },
-    {
-        "round":  1,
-        "title":  "Which data structure uses FIFO?",
-        "options":  [
-                        "Stack",
-                        "Queue",
-                        "Tree",
-                        "Graph"
-                    ],
-        "correctAnswer":  1,
-        "marks":  10
-    },
-    {
-        "round":  1,
-        "title":  "Time complexity of binary search?",
-        "options":  [
-                        "O(1)",
-                        "O(n)",
-                        "O(log n)",
-                        "O(n log n)"
-                    ],
-        "correctAnswer":  2,
-        "marks":  10
-    },
-    {
-        "round":  1,
-        "title":  "Which keyword declares a block-scoped variable in JavaScript?",
-        "options":  [
-                        "var",
-                        "static",
-                        "let",
-                        "global"
-                    ],
-        "correctAnswer":  2,
-        "marks":  10
-    },
-    {
-        "round":  1,
-        "title":  "Which traversal visits Left, Root, Right in a binary tree?",
-        "options":  [
-                        "Preorder",
-                        "Inorder",
-                        "Postorder",
-                        "Level order"
-                    ],
-        "correctAnswer":  1,
-        "marks":  10
-    },
-    {
-        "round":  1,
-        "title":  "Which SQL clause is used to filter grouped rows?",
-        "options":  [
-                        "WHERE",
-                        "ORDER BY",
-                        "HAVING",
-                        "DISTINCT"
-                    ],
-        "correctAnswer":  2,
-        "marks":  10
-    },
-    {
-        "round":  1,
-        "title":  "What does HTTP status code 404 represent?",
-        "options":  [
-                        "Unauthorized",
-                        "Not Found",
-                        "Bad Gateway",
-                        "Conflict"
-                    ],
-        "correctAnswer":  1,
-        "marks":  10
-    },
-    {
-        "round":  1,
-        "title":  "Which sorting algorithm has average-case O(n log n)?",
-        "options":  [
-                        "Bubble Sort",
-                        "Selection Sort",
-                        "Merge Sort",
-                        "Insertion Sort"
-                    ],
-        "correctAnswer":  2,
-        "marks":  10
-    },
-    {
-        "round":  1,
-        "title":  "What is the output of this expression in JavaScript?",
-        "codeSnippet":  "[] + {}",
-        "options":  [
-                        "0",
-                        "[object Object]",
-                        "NaN",
-                        "TypeError"
-                    ],
-        "correctAnswer":  1,
-        "marks":  10
-    },
-    {
-        "round":  1,
-        "title":  "Which operation is typically O(1) in a hash table?",
-        "options":  [
-                        "Binary search",
-                        "Insertion",
-                        "Tree traversal",
-                        "Heapify"
-                    ],
-        "correctAnswer":  1,
-        "marks":  10
-    },
-    {
-        "round":  1,
-        "title":  "In Git, which command creates a new branch and switches to it?",
-        "options":  [
-                        "git branch -d",
-                        "git checkout -b",
-                        "git merge --new",
-                        "git branch --switch"
-                    ],
-        "correctAnswer":  1,
-        "marks":  10
-    },
-    {
-        "round":  1,
-        "title":  "Which normalization form removes partial dependency?",
-        "options":  [
-                        "1NF",
-                        "2NF",
-                        "3NF",
-                        "BCNF"
-                    ],
-        "correctAnswer":  1,
-        "marks":  10
-    },
-    {
-        "round":  1,
-        "title":  "What is the space complexity of recursive DFS in worst case?",
-        "options":  [
-                        "O(1)",
-                        "O(log n)",
-                        "O(h)",
-                        "O(n^2)"
-                    ],
-        "correctAnswer":  2,
-        "marks":  10
-    },
-    {
-        "round":  1,
-        "title":  "Which protocol is used for secure web communication?",
-        "options":  [
-                        "FTP",
-                        "SSH",
-                        "HTTPS",
-                        "SMTP"
-                    ],
-        "correctAnswer":  2,
-        "marks":  10
-    },
-    {
-        "round":  1,
-        "title":  "In JavaScript, which method converts JSON string to object?",
-        "options":  [
-                        "JSON.stringify()",
-                        "JSON.parse()",
-                        "JSON.object()",
-                        "JSON.decode()"
-                    ],
-        "correctAnswer":  1,
-        "marks":  10
-    }
+  {
+    "round": 1,
+    "difficulty": "easy",
+    "title": "What does HTTP status code 404 mean?",
+    "codeSnippet": "",
+    "options": ["Server crashed", "Page not found", "Unauthorized access", "Bad request"],
+    "correctAnswer": 1,
+    "marks": 4
+  },
+  {
+    "round": 1,
+    "difficulty": "easy",
+    "title": "Which default port is used for HTTPS connections?",
+    "codeSnippet": "",
+    "options": ["21", "80", "443", "3306"],
+    "correctAnswer": 2,
+    "marks": 4
+  },
+  {
+    "round": 1,
+    "difficulty": "easy",
+    "title": "Which data structure processes elements in FIFO order?",
+    "codeSnippet": "",
+    "options": ["Stack", "Queue", "Tree", "Graph"],
+    "correctAnswer": 1,
+    "marks": 4
+  },
+  {
+    "round": 1,
+    "difficulty": "easy",
+    "title": "Which binary tree traversal follows Left, Root, Right order?",
+    "codeSnippet": "",
+    "options": ["Preorder", "Inorder", "Postorder", "Level order"],
+    "correctAnswer": 1,
+    "marks": 4
+  },
+  {
+    "round": 1,
+    "difficulty": "easy",
+    "title": "Which Git command pushes your local commits to a remote repository?",
+    "codeSnippet": "",
+    "options": ["git clone", "git status", "git push", "git fetch"],
+    "correctAnswer": 2,
+    "marks": 4
+  },
+  {
+    "round": 1,
+    "difficulty": "medium",
+    "title": "What is the output of this integer division snippet?",
+    "codeSnippet": "// C++\nint a = 7, b = 2;\ncout << a / b;\n\n// Java\nint a = 7, b = 2;\nSystem.out.print(a / b);",
+    "options": ["3.5", "3", "4", "Compilation Error"],
+    "correctAnswer": 1,
+    "marks": 4
+  },
+  {
+    "round": 1,
+    "difficulty": "medium",
+    "title": "What is printed by this for-loop snippet?",
+    "codeSnippet": "// C++\nfor (int i = 0; i < 3; i++) {\n  cout << i;\n}\n\n// Java\nfor (int i = 0; i < 3; i++) {\n  System.out.print(i);\n}",
+    "options": ["123", "0123", "012", "3"],
+    "correctAnswer": 2,
+    "marks": 4
+  },
+  {
+    "round": 1,
+    "difficulty": "medium",
+    "title": "What is printed after the pre-increment operation here?",
+    "codeSnippet": "// C++\nint x = 5;\nint y = ++x;\ncout << x << y;\n\n// Java\nint x = 5;\nint y = ++x;\nSystem.out.print(x + \"\" + y);",
+    "options": ["55", "56", "65", "66"],
+    "correctAnswer": 3,
+    "marks": 4
+  },
+  {
+    "round": 1,
+    "difficulty": "medium",
+    "title": "Which value is accessed from the array at index 1?",
+    "codeSnippet": "// C++\nint arr[] = {10, 20, 30};\ncout << arr[1];\n\n// Java\nint[] arr = {10, 20, 30};\nSystem.out.print(arr[1]);",
+    "options": ["10", "20", "30", "Error"],
+    "correctAnswer": 1,
+    "marks": 4
+  },
+  {
+    "round": 1,
+    "difficulty": "medium",
+    "title": "What is the result of the modulo expression shown?",
+    "codeSnippet": "// C++\ncout << 10 % 3;\n\n// Java\nSystem.out.print(10 % 3);",
+    "options": ["3.33", "3", "1", "0"],
+    "correctAnswer": 2,
+    "marks": 4
+  },
+  {
+    "round": 1,
+    "difficulty": "hard",
+    "title": "What value is produced after this XOR expression runs?",
+    "codeSnippet": "// C++\nint a = 5, b = 7;\ncout << (a ^ a ^ b);\n\n// Java\nint a = 5, b = 7;\nSystem.out.print(a ^ a ^ b);",
+    "options": ["0", "5", "7", "12"],
+    "correctAnswer": 2,
+    "marks": 4
+  },
+  {
+    "round": 1,
+    "difficulty": "hard",
+    "title": "What output comes from this static counter example?",
+    "codeSnippet": "// C++\nint f() {\n  static int i = 0;\n  return i++;\n}\ncout << f() << f();\n\n// Java\nclass Counter {\n  static int i = 0;\n  static int f() {\n    return i++;\n  }\n}\nSystem.out.print(Counter.f());\nSystem.out.print(Counter.f());",
+    "options": ["00", "11", "01", "12"],
+    "correctAnswer": 2,
+    "marks": 4
+  },
+  {
+    "round": 1,
+    "difficulty": "hard",
+    "title": "What is printed because of short-circuit evaluation in this code?",
+    "codeSnippet": "// C++\nint a = 1, b = 1;\nif (a-- > 0 || ++b > 1) {\n  cout << a << b;\n}\n\n// Java\nint a = 1, b = 1;\nif (a-- > 0 || ++b > 1) {\n  System.out.print(a + \"\" + b);\n}",
+    "options": ["01", "02", "12", "11"],
+    "correctAnswer": 0,
+    "marks": 4
+  },
+  {
+    "round": 1,
+    "difficulty": "hard",
+    "title": "What are the final printed values after this post-increment assignment?",
+    "codeSnippet": "// C++\nint x = 3;\nint y = x++ + ++x;\ncout << x << \" \" << y;\n\n// Java\nint x = 3;\nint y = x++ + ++x;\nSystem.out.print(x + \" \" + y);",
+    "options": ["4 7", "5 8", "5 7", "4 8"],
+    "correctAnswer": 1,
+    "marks": 4
+  },
+  {
+    "round": 1,
+    "difficulty": "hard",
+    "title": "How do these equality checks behave in C++ and Java?",
+    "codeSnippet": "// C++\nint a = 10;\nint* p1 = &a;\nint* p2 = &a;\ncout << (p1 == p2);\n\n// Java\nInteger a = 1000;\nInteger b = 1000;\nSystem.out.print(a == b);",
+    "options": ["C++: true | Java: true", "C++: true | Java: false", "C++: false | Java: true", "C++: false | Java: false"],
+    "correctAnswer": 1,
+    "marks": 4
+  }
 ]

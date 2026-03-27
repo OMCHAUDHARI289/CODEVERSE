@@ -47,6 +47,60 @@ const getSubmissionStatus = (team) => {
   return "Awaiting submission";
 };
 
+const deriveElapsedSeconds = ({ startedAt, submittedAt, storedSeconds = 0 }) => {
+  const normalizedStored = Number(storedSeconds) || 0;
+  if (normalizedStored > 0) return normalizedStored;
+
+  const startedAtMs = startedAt ? new Date(startedAt).getTime() : NaN;
+  const submittedAtMs = submittedAt ? new Date(submittedAt).getTime() : NaN;
+
+  if (!Number.isFinite(startedAtMs) || !Number.isFinite(submittedAtMs)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.floor((submittedAtMs - startedAtMs) / 1000));
+};
+
+const getRoundTimingSummary = (team) => {
+  const round1StartedAt = team?.roundRuntime?.round1?.startedAt || null;
+  const round1SubmittedAt = team?.submissions?.round1?.submittedAt || null;
+  const round2StartedAt = team?.submissions?.round2?.startedAt || null;
+  const round2SubmittedAt = team?.submissions?.round2?.submittedAt || null;
+  const round3StartedAt =
+    team?.submissions?.round3?.startedAt || team?.roundRuntime?.round3?.startedAt || null;
+  const round3SubmittedAt = team?.submissions?.round3?.submittedAt || null;
+
+  return {
+    round1: {
+      startedAt: round1StartedAt,
+      submittedAt: round1SubmittedAt,
+      timeSpentSeconds: deriveElapsedSeconds({
+        startedAt: round1StartedAt,
+        submittedAt: round1SubmittedAt,
+        storedSeconds: team?.submissions?.round1?.timeSpentSeconds
+      })
+    },
+    round2: {
+      startedAt: round2StartedAt,
+      submittedAt: round2SubmittedAt,
+      timeSpentSeconds: deriveElapsedSeconds({
+        startedAt: round2StartedAt,
+        submittedAt: round2SubmittedAt,
+        storedSeconds: team?.submissions?.round2?.timeSpentSeconds
+      })
+    },
+    round3: {
+      startedAt: round3StartedAt,
+      submittedAt: round3SubmittedAt,
+      timeSpentSeconds: deriveElapsedSeconds({
+        startedAt: round3StartedAt,
+        submittedAt: round3SubmittedAt,
+        storedSeconds: team?.submissions?.round3?.timeSpentSeconds
+      })
+    }
+  };
+};
+
 const deriveTeamActivity = (team) => {
   const round1SubmittedAt = team?.submissions?.round1?.submittedAt
     ? new Date(team.submissions.round1.submittedAt)
@@ -263,7 +317,7 @@ export const getTeamMonitor = asyncHandler(async (req, res) => {
   const [teams, latestRequests] = await Promise.all([
     Team.find({})
       .select(
-        "teamId teamName members currentRound totalScore scores lifelines isLoggedIn submissions completedAt updatedAt"
+        "teamId teamName members currentRound totalScore scores lifelines isLoggedIn submissions roundRuntime completedAt updatedAt"
       )
       .lean(),
     LifelineRequest.aggregate([
@@ -299,11 +353,13 @@ export const getTeamMonitor = asyncHandler(async (req, res) => {
     const round = getRoundCode(team.currentRound);
     const lifecycleStatus = getTeamLifecycleStatus(team);
     const latestRequest = latestRequestByTeam.get(String(team._id)) || null;
+    const roundTiming = getRoundTimingSummary(team);
     const round2Usage =
       Number(team?.lifelines?.round2UsedCount) || (team?.lifelines?.round2Used ? 1 : 0);
     const round3Usage =
       Number(team?.lifelines?.round3UsedCount) || (team?.lifelines?.round3Used ? 1 : 0);
-    const lifelineUsed = round2Usage > 0 || round3Usage > 0;
+    const totalLifelineUsage = round2Usage + round3Usage;
+    const lifelineUsed = totalLifelineUsage > 0;
 
     let lifelineState = "Available";
     if (latestRequest?.status === "pending") lifelineState = "Pending";
@@ -327,10 +383,12 @@ export const getTeamMonitor = asyncHandler(async (req, res) => {
       status: lifecycleStatus,
       lifeline: lifelineState,
       lifelineUsage: {
+        total: totalLifelineUsage,
         round2: round2Usage,
         round3: round3Usage
       },
       lifelineRequest: latestRequest,
+      roundTiming,
       submissionStatus: getSubmissionStatus(team),
       isOnline: Boolean(team.isLoggedIn),
       lastUpdatedAt: team.updatedAt || null

@@ -229,13 +229,15 @@ export default function Round3ArenaPage() {
   const {
     isHydrated, agreedToTerms, selectedLanguage, code, challengeMeta, timeLeft, roundStartedAt,
     warnings, isSuspicious, isChallengeLoading, isRunning, isSubmitting, timerStarted,
-    runResult, submitResult, statusMessage, restrictionsEnabled, liveProgress,
-    totalBugs, pointsPerBug, startTimer, updateCode, runCode, submitCode, registerTabSwitch,
+    runResult, submitResult, statusMessage, restrictionsEnabled, liveProgress, hintState,
+    totalBugs, pointsPerBug, runCount, maxRuns, startTimer, updateCode, resetCode,
+    runCode, submitCode, revealHint, registerTabSwitch,
   } = useRound3Battle();
 
   const [restrictionNotice,  setRestrictionNotice]  = useState("");
   const [lifeline,           setLifeline]           = useState(null);
   const [lifelineBusy,       setLifelineBusy]       = useState(false);
+  const [hintBusy,           setHintBusy]           = useState(false);
   const [saved,              setSaved]              = useState(true);
   const [showSubmitConfirm,  setShowSubmitConfirm]  = useState(false);
   const saveTimerRef = useRef(null);
@@ -320,24 +322,51 @@ export default function Round3ArenaPage() {
   const monacoLanguage = selectedLanguage === "java" ? "java" : "cpp";
   const isUrgent       = timeLeft <= 300;
   const progressPct    = totalBugs > 0 ? (liveProgress.passed / totalBugs) * 100 : 0;
+  const runsRemaining  = Math.max(0, Number(maxRuns) - Number(runCount));
+  const runLimitReached = runsRemaining <= 0;
 
   const roundStartedAtMs = roundStartedAt ? new Date(roundStartedAt).getTime() : NaN;
   const elapsedSeconds   = Number.isFinite(roundStartedAtMs)
     ? Math.max(0, Math.floor((Date.now() - roundStartedAtMs) / 1000)) : 0;
   const lifelineUnlocked     = elapsedSeconds >= LIFELINE_UNLOCK_DELAY_SECONDS;
   const lifelineWaitSeconds  = Math.max(0, LIFELINE_UNLOCK_DELAY_SECONDS - elapsedSeconds);
-  const lifelineRemaining    = Number(lifeline?.remainingCount ?? 2);
+  const lifelineRemaining    = Number(lifeline?.remainingCount ?? 1);
   const lifelineUsedCount    = Number(lifeline?.usedCount ?? 0);
   const lifelinePending      = lifeline?.request?.status === "pending";
   const lifelineApproved     = lifeline?.request?.status === "approved";
   const lifelineRejected     = lifeline?.request?.status === "rejected";
   const lifelinePenalty      = Number(lifeline?.penaltyPoints ?? 20);
+  const hintNextAvailableAtMs = hintState?.nextAvailableAt
+    ? new Date(hintState.nextAvailableAt).getTime()
+    : NaN;
+  const hintRemainingSeconds = Number.isFinite(hintNextAvailableAtMs)
+    ? Math.max(0, Math.ceil((hintNextAvailableAtMs - Date.now()) / 1000))
+    : 0;
+  const canUseHint = !submitResult && hintRemainingSeconds <= 0;
+  const revealedHintCount = Number(hintState?.usedCount) || 0;
 
   const handleCodeChange = (value) => {
     updateCode(value || "");
     setSaved(false);
     window.clearTimeout(saveTimerRef.current);
     saveTimerRef.current = window.setTimeout(() => setSaved(true), 1200);
+  };
+
+  const handleResetCode = () => {
+    window.clearTimeout(saveTimerRef.current);
+    resetCode();
+    setSaved(true);
+  };
+
+  const handleRevealHint = async () => {
+    if (hintBusy || !canUseHint || submitResult) return;
+    setHintBusy(true);
+    try {
+      await revealHint();
+      setSaved(true);
+    } finally {
+      setHintBusy(false);
+    }
   };
 
   const handleSubmitClick = () => {
@@ -573,7 +602,7 @@ export default function Round3ArenaPage() {
                   <div>
                     <p style={{ ...lbl, fontSize:"8px", color:"rgba(251,146,60,0.5)" }}>remaining</p>
                     <p style={{ ...lbl, fontSize:"7px", color:"rgba(100,116,139,0.5)", marginTop:"2px" }}>
-                      {lifelineUsedCount} / {lifeline?.maxRequests??2} used · −{lifelinePenalty} pts
+                      {lifelineUsedCount} / {lifeline?.maxRequests??1} used · −{lifelinePenalty} pts
                     </p>
                   </div>
                 </div>
@@ -584,9 +613,9 @@ export default function Round3ArenaPage() {
                     : !lifelineUnlocked
                       ? `Unlocks in ${formatTime(lifelineWaitSeconds)}.`
                       : lifelinePending ? "Pending admin approval."
-                      : lifelineRemaining<=0 ? "Both lifelines used."
-                      : lifelineApproved ? "One approved. One remaining."
-                      : lifelineRejected ? "Last request rejected. Retry if attempts remain."
+                      : lifelineRemaining<=0 ? "Shared lifeline already used."
+                      : lifelineApproved ? "Approved lifeline applied. No lifelines remain."
+                      : lifelineRejected ? "Last request rejected. Retry if the shared lifeline is still unused."
                       : "Lifeline ready to request."}
                 </p>
                 {lifeline?.request?.requestedAt && (
@@ -735,7 +764,7 @@ export default function Round3ArenaPage() {
             </div>
 
             {/* Monaco */}
-            <div style={{ flex:1, minHeight:0, height:"430px", position:"relative" }}>
+            <div style={{ flex:1, minHeight:0, height:"560px", position:"relative" }}>
               {isChallengeLoading ? (
                 <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }}
                   style={{ height:"100%", display:"flex", flexDirection:"column",
@@ -802,25 +831,69 @@ export default function Round3ArenaPage() {
                 title={selectedLanguage?"Language is locked once selected":""}
               >{selectedLanguage?"🔒 Locked":"⟳ Language"}</motion.button>
 
+              <motion.button whileTap={{ scale:0.97 }} type="button"
+                onClick={handleResetCode}
+                disabled={Boolean(submitResult)||isChallengeLoading}
+                style={{ ...mono, fontSize:"10px", fontWeight:700, letterSpacing:"0.12em",
+                  textTransform:"uppercase", padding:"10px 16px", borderRadius:"10px",
+                  border:"1px solid rgba(251,146,60,0.28)",
+                  background:"rgba(251,146,60,0.08)",
+                  color:Boolean(submitResult)||isChallengeLoading?"rgba(251,146,60,0.4)":"#fdba74",
+                  cursor:Boolean(submitResult)||isChallengeLoading?"not-allowed":"pointer",
+                  opacity:Boolean(submitResult)||isChallengeLoading?0.65:1,
+                  transition:"all 0.14s" }}
+                onMouseEnter={e=>{if(!submitResult&&!isChallengeLoading){e.currentTarget.style.background="rgba(251,146,60,0.16)";e.currentTarget.style.boxShadow="0 0 14px rgba(251,146,60,0.18)";}}}
+                onMouseLeave={e=>{e.currentTarget.style.background="rgba(251,146,60,0.08)";e.currentTarget.style.boxShadow="none";}}
+              >Reset Code</motion.button>
+
+              <motion.button whileTap={{ scale:0.97 }} type="button"
+                onClick={() => void handleRevealHint()}
+                disabled={hintBusy||isRunning||isSubmitting||isChallengeLoading||Boolean(submitResult)||!canUseHint}
+                style={{ ...mono, fontSize:"10px", fontWeight:700, letterSpacing:"0.12em",
+                  textTransform:"uppercase", padding:"10px 16px", borderRadius:"10px",
+                  border:`1px solid ${canUseHint?"rgba(167,139,250,0.35)":"rgba(167,139,250,0.18)"}`,
+                  background:canUseHint?"rgba(167,139,250,0.12)":"rgba(167,139,250,0.06)",
+                  color:hintBusy||isRunning||isSubmitting||isChallengeLoading||Boolean(submitResult)||!canUseHint
+                    ? "rgba(196,181,253,0.42)"
+                    : "#c4b5fd",
+                  cursor:hintBusy||isRunning||isSubmitting||isChallengeLoading||Boolean(submitResult)||!canUseHint
+                    ? "not-allowed"
+                    : "pointer",
+                  opacity:hintBusy||isRunning||isSubmitting||isChallengeLoading||Boolean(submitResult)||!canUseHint?0.72:1,
+                  transition:"all 0.14s",
+                  display:"flex", alignItems:"center", gap:"7px" }}
+                onMouseEnter={e=>{if(!hintBusy&&!isRunning&&!isSubmitting&&!isChallengeLoading&&!submitResult&&canUseHint){e.currentTarget.style.background="rgba(167,139,250,0.2)";e.currentTarget.style.boxShadow="0 0 14px rgba(167,139,250,0.18)";}}}
+                onMouseLeave={e=>{e.currentTarget.style.background=canUseHint?"rgba(167,139,250,0.12)":"rgba(167,139,250,0.06)";e.currentTarget.style.boxShadow="none";}}
+                title={canUseHint?"Reveal one hint in the editor":"Next hint is cooling down"}
+              >
+                {hintBusy
+                  ? <><motion.span animate={{ rotate:360 }} transition={{ duration:.8, repeat:Infinity, ease:"linear" }}>◌</motion.span> Revealing...</>
+                  : canUseHint
+                    ? "Use Hint"
+                    : `Hint in ${formatTime(hintRemainingSeconds)}`}
+              </motion.button>
+
               {/* Run Code */}
               <motion.button whileTap={{ scale:0.97 }} type="button"
                 onClick={()=>void runCode()}
-                disabled={isRunning||isSubmitting||isChallengeLoading}
+                disabled={isRunning||isSubmitting||isChallengeLoading||runLimitReached}
                 style={{ ...mono, fontSize:"10px", fontWeight:700, letterSpacing:"0.12em",
                   textTransform:"uppercase", padding:"10px 18px", borderRadius:"10px",
-                  border:`1px solid ${isRunning?"rgba(251,146,60,0.45)":"rgba(255,255,255,0.12)"}`,
-                  background:isRunning?"rgba(251,146,60,0.1)":"rgba(255,255,255,0.03)",
-                  color:isRunning||isSubmitting||isChallengeLoading?"rgba(203,213,225,0.4)":"rgba(226,232,240,0.85)",
-                  cursor:isRunning||isSubmitting||isChallengeLoading?"not-allowed":"pointer",
-                  opacity:isRunning||isSubmitting||isChallengeLoading?0.65:1,
+                  border:`1px solid ${isRunning?"rgba(251,146,60,0.45)":runLimitReached?"rgba(248,113,113,0.3)":"rgba(255,255,255,0.12)"}`,
+                  background:isRunning?"rgba(251,146,60,0.1)":runLimitReached?"rgba(248,113,113,0.08)":"rgba(255,255,255,0.03)",
+                  color:isRunning||isSubmitting||isChallengeLoading||runLimitReached?"rgba(203,213,225,0.4)":"rgba(226,232,240,0.85)",
+                  cursor:isRunning||isSubmitting||isChallengeLoading||runLimitReached?"not-allowed":"pointer",
+                  opacity:isRunning||isSubmitting||isChallengeLoading||runLimitReached?0.65:1,
                   transition:"all 0.14s",
                   display:"flex", alignItems:"center", gap:"7px" }}
-                onMouseEnter={e=>{if(!isRunning&&!isSubmitting&&!isChallengeLoading){e.currentTarget.style.background="rgba(255,255,255,0.07)";}}}
-                onMouseLeave={e=>{e.currentTarget.style.background=isRunning?"rgba(251,146,60,0.1)":"rgba(255,255,255,0.03)";}}
+                onMouseEnter={e=>{if(!isRunning&&!isSubmitting&&!isChallengeLoading&&!runLimitReached){e.currentTarget.style.background="rgba(255,255,255,0.07)";}}}
+                onMouseLeave={e=>{e.currentTarget.style.background=isRunning?"rgba(251,146,60,0.1)":runLimitReached?"rgba(248,113,113,0.08)":"rgba(255,255,255,0.03)";}}
               >
                 {isRunning
                   ? <><motion.span animate={{ rotate:360 }} transition={{ duration:.8, repeat:Infinity, ease:"linear" }}>◌</motion.span> Running...</>
-                  : <><span>▶</span> Run Code</>}
+                  : runLimitReached
+                    ? "Run Limit Reached"
+                    : "Run Code"}
               </motion.button>
 
               {/* Submit */}
@@ -851,6 +924,12 @@ export default function Round3ArenaPage() {
               </motion.button>
 
               <div style={{ flex:1 }}/>
+              <span style={{ ...lbl, fontSize:"8px", color:"rgba(167,139,250,0.62)" }}>
+                hints {revealedHintCount}
+              </span>
+              <span style={{ ...lbl, fontSize:"8px", color:runLimitReached?"rgba(248,113,113,0.55)":"rgba(56,189,248,0.45)" }}>
+                runs {runCount}/{maxRuns}
+              </span>
               <span style={{ ...lbl, fontSize:"8px", color:"rgba(100,116,139,0.4)" }}>
                 {code.split("\n").length} lines
               </span>
@@ -862,3 +941,5 @@ export default function Round3ArenaPage() {
     </>
   );
 }
+
+

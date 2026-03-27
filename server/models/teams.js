@@ -79,6 +79,8 @@ const round3SubmissionSchema = new mongoose.Schema(
 
     warnings: { type: Number, default: 0 },
     runCount: { type: Number, default: 0 },
+    hintCount: { type: Number, default: 0 },
+    revealedHintBugIds: { type: [Number], default: [] },
 
     isSuspicious: { type: Boolean, default: false },
     isStarted: { type: Boolean, default: false },
@@ -89,6 +91,7 @@ const round3SubmissionSchema = new mongoose.Schema(
     startedAt: Date,
     submittedAt: Date,
     lastRunAt: Date,
+    nextHintAvailableAt: Date,
     lastActivityAt: Date,
     timeSpentSeconds: { type: Number, default: 0 },
 
@@ -155,7 +158,8 @@ const teamSchema = new mongoose.Schema(
         isSubmitted: { type: Boolean, default: false },
         submittedAt: Date,
         score: { type: Number, default: 0 },
-        correctCount: { type: Number, default: 0 }
+        correctCount: { type: Number, default: 0 },
+        timeSpentSeconds: { type: Number, default: 0 }
       },
 
       round2: {
@@ -165,7 +169,8 @@ const teamSchema = new mongoose.Schema(
         totalScore: { type: Number, default: 0 },
         startedAt: Date,
         lastActivityAt: Date,
-        submittedAt: Date
+        submittedAt: Date,
+        timeSpentSeconds: { type: Number, default: 0 }
       },
 
       round3: {

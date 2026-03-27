@@ -1,16 +1,36 @@
 export const ROUND3_TOTAL_BUGS = 30;
 export const ROUND3_POINTS_PER_BUG = 5;
 export const ROUND3_DURATION_SECONDS = 60 * 60;
-
-const buildBuggyCode = (fixedCode, rules) =>
-  rules.reduce((nextCode, rule) => nextCode.replace(rule.fixed, rule.broken), fixedCode);
+export const ROUND3_HINT_COOLDOWN_SECONDS = 15 * 60;
 
 const normalizeCode = (code = "") => String(code).replace(/\r\n/g, "\n");
+const stripSeededBugComment = (code = "") =>
+  String(code).replace(/[ \t]*\/\/\s*BUG\s*\d+\s*:[^\n\r]*/g, "");
+const getBrokenVariants = (rule) =>
+  Array.from(
+    new Set(
+      [String(rule?.broken || ""), stripSeededBugComment(rule?.broken || "")]
+        .map((snippet) => normalizeCode(snippet))
+        .filter(Boolean)
+    )
+  );
+
+export const sanitizeRound3EditorCode = (code = "") => normalizeCode(stripSeededBugComment(code));
+
+const buildBuggyCode = (fixedCode, rules) =>
+  rules.reduce(
+    (nextCode, rule) => nextCode.replace(rule.fixed, stripSeededBugComment(rule.broken)),
+    fixedCode
+  );
 
 const evaluateRules = (rules, code) => {
-  const normalizedCode = normalizeCode(code);
+  const normalizedCode = sanitizeRound3EditorCode(code);
   const fixedBugIds = rules
-    .filter((rule) => normalizedCode.includes(rule.fixed) && !normalizedCode.includes(rule.broken))
+    .filter(
+      (rule) =>
+        normalizedCode.includes(rule.fixed) &&
+        !getBrokenVariants(rule).some((brokenVariant) => normalizedCode.includes(brokenVariant))
+    )
     .map((rule) => rule.id);
 
   return {
@@ -21,6 +41,41 @@ const evaluateRules = (rules, code) => {
     passed: fixedBugIds.length,
     total: ROUND3_TOTAL_BUGS,
     score: fixedBugIds.length * ROUND3_POINTS_PER_BUG
+  };
+};
+
+const ROUND3_HINT_LINE_MESSAGES = [
+  "take a closer look here",
+  "this line feels off",
+  "recheck this statement",
+  "something here needs attention",
+  "this part may be corrupted",
+  "verify this line carefully"
+];
+
+const getRound3HintComment = ({ language }) => {
+  const commentPrefix = language === "java" ? "//" : "//";
+  const randomIndex = Math.floor(Math.random() * ROUND3_HINT_LINE_MESSAGES.length);
+  return `${commentPrefix} ${ROUND3_HINT_LINE_MESSAGES[randomIndex]}`;
+};
+
+const injectRound3HintComment = ({ language, code, rule }) => {
+  const normalizedCode = sanitizeRound3EditorCode(code);
+  const hintComment = getRound3HintComment({ language });
+  const candidateSnippets = [...getBrokenVariants(rule), rule.fixed].filter(Boolean);
+
+  for (const snippet of candidateSnippets) {
+    if (normalizedCode.includes(snippet)) {
+      return {
+        code: normalizedCode.replace(snippet, `${snippet} ${hintComment}`),
+        comment: hintComment
+      };
+    }
+  }
+
+  return {
+    code: `${hintComment}\n${normalizedCode}`,
+    comment: hintComment
   };
 };
 
@@ -265,6 +320,48 @@ export const evaluateRound3Code = ({ language, code }) => {
   return {
     ...evaluateRules(challenge.rules, code),
     title: challenge.subtitle
+  };
+};
+
+export const getNextRound3Hint = ({
+  language,
+  code,
+  revealedHintBugIds = []
+}) => {
+  const challenge = getRound3Challenge(language);
+  const normalizedCode = sanitizeRound3EditorCode(code);
+  const revealedBugIds = new Set(
+    (Array.isArray(revealedHintBugIds) ? revealedHintBugIds : [])
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id))
+  );
+
+  const nextRule = challenge.rules.find((rule) => {
+    if (revealedBugIds.has(rule.id)) {
+      return false;
+    }
+
+    const isFixed =
+      normalizedCode.includes(rule.fixed) &&
+      !getBrokenVariants(rule).some((brokenVariant) => normalizedCode.includes(brokenVariant));
+
+    return !isFixed;
+  });
+
+  if (!nextRule) {
+    return null;
+  }
+
+  const hint = injectRound3HintComment({
+    language: challenge.language,
+    code: normalizedCode,
+    rule: nextRule
+  });
+
+  return {
+    bugId: nextRule.id,
+    code: hint.code,
+    comment: hint.comment
   };
 };
 

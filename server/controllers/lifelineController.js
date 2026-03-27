@@ -6,7 +6,7 @@ const LIFELINE_PENALTIES = {
   round2: 10,
   round3: 20
 };
-const LIFELINE_MAX_PER_ROUND = 2;
+const LIFELINE_MAX_TOTAL = 1;
 const LIFELINE_UNLOCK_DELAY_MS = 15 * 60 * 1000;
 
 const isValidRound = (round) => ["round2", "round3"].includes(round);
@@ -63,6 +63,9 @@ const getRoundUsageCount = (team, round) => {
   return team?.lifelines?.[usageFlag] ? 1 : 0;
 };
 
+const getTotalUsageCount = (team) =>
+  getRoundUsageCount(team, "round2") + getRoundUsageCount(team, "round3");
+
 const getAvailabilityState = (team, round) => {
   const startedAt = getRoundStartedAt(team, round);
   const startedAtMs = startedAt ? new Date(startedAt).getTime() : NaN;
@@ -86,28 +89,28 @@ const getAvailabilityState = (team, round) => {
 
 const buildLifelineStatusPayload = async ({ team, round }) => {
   const usageFlag = getRoundUsageFlag(round);
-  const usedCount = getRoundUsageCount(team, round);
+  const usedCount = getTotalUsageCount(team);
   const { available, availableAt, roundStartedAt } = getAvailabilityState(team, round);
   const latestRequest = await LifelineRequest.findOne({
-    team: team._id,
-    round
+    team: team._id
   })
     .sort({ requestedAt: -1 })
-    .select("status requestedAt resolvedAt note");
+    .select("round status requestedAt resolvedAt note");
 
   return {
     round,
     penaltyPoints: getRoundPenalty(round),
     used: Boolean(team?.lifelines?.[usageFlag]) || usedCount > 0,
     usedCount,
-    remainingCount: Math.max(0, LIFELINE_MAX_PER_ROUND - usedCount),
-    maxRequests: LIFELINE_MAX_PER_ROUND,
+    remainingCount: Math.max(0, LIFELINE_MAX_TOTAL - usedCount),
+    maxRequests: LIFELINE_MAX_TOTAL,
     unlockAfterMinutes: LIFELINE_UNLOCK_DELAY_MS / 60000,
     roundStartedAt,
     availableAt,
     available,
     request: latestRequest
       ? {
+          round: latestRequest.round,
           status: latestRequest.status,
           requestedAt: latestRequest.requestedAt,
           resolvedAt: latestRequest.resolvedAt || null,
@@ -177,7 +180,7 @@ export const requestLifeline = asyncHandler(async (req, res) => {
   }
 
   const requiredRound = getRoundNumber(round);
-  const usedCount = getRoundUsageCount(req.team, round);
+  const usedCount = getTotalUsageCount(req.team);
   const { available, availableAt } = getAvailabilityState(req.team, round);
 
   if ((Number(req.team?.currentRound) || 1) < requiredRound) {
@@ -195,13 +198,12 @@ export const requestLifeline = asyncHandler(async (req, res) => {
     throw new AppError(`Lifeline becomes available at ${unlockText}`, 400);
   }
 
-  if (usedCount >= LIFELINE_MAX_PER_ROUND) {
-    throw new AppError("Lifeline limit reached for this round", 400);
+  if (usedCount >= LIFELINE_MAX_TOTAL) {
+    throw new AppError("Lifeline already used", 400);
   }
 
   const pendingRequest = await LifelineRequest.findOne({
     team: req.team._id,
-    round,
     status: "pending"
   });
 
@@ -241,7 +243,7 @@ export const getLifelinePenalty = (round) =>
 
 export const getLifelinePenaltyConfig = () => ({
   perRound: { ...LIFELINE_PENALTIES },
-  maxRequests: LIFELINE_MAX_PER_ROUND,
+  maxRequests: LIFELINE_MAX_TOTAL,
   unlockAfterMinutes: LIFELINE_UNLOCK_DELAY_MS / 60000
 });
 
@@ -253,8 +255,8 @@ export const applyLifelinePenaltyToTeam = ({ team, round }) => {
 
   ensureLifelineShape(team);
 
-  if (getRoundUsageCount(team, round) >= LIFELINE_MAX_PER_ROUND) {
-    throw new AppError("Lifeline limit reached for this round", 400);
+  if (getTotalUsageCount(team) >= LIFELINE_MAX_TOTAL) {
+    throw new AppError("Lifeline already used", 400);
   }
 
   if (!team.scores) {

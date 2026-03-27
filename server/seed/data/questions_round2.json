@@ -1,134 +1,245 @@
 [
   {
-    "round": 2,
-    "title": "Sum Pair",
-    "description": "Read two integers and print their sum.",
-    "difficulty": "easy",
-    "inputFormat": "Two space-separated integers a and b.",
-    "outputFormat": "Print a + b.",
-    "constraints": ["-10^9 <= a, b <= 10^9"],
-    "visibleTestCases": [
-      { "input": "2 3", "output": "5", "ignoreOrder": false },
-      { "input": "-5 11", "output": "6", "ignoreOrder": false },
-      { "input": "0 0", "output": "0", "ignoreOrder": false }
-    ],
-    "hiddenTestCases": [
-      { "input": "1000000 2500000", "output": "3500000", "ignoreOrder": false },
-      { "input": "-7 -8", "output": "-15", "ignoreOrder": false }
-    ],
-    "starterCode": {
-      "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  long long a, b;\n  cin >> a >> b;\n  // print answer\n  return 0;\n}\n",
-      "java": "import java.util.*;\n\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    long a = sc.nextLong();\n    long b = sc.nextLong();\n    // print answer\n  }\n}\n"
+  "round": 2,
+  "title": "The Green Credits Streak",
+  "description": "A college has implemented a Green Credits system to reward students for eco-friendly actions. You are given an array A of size N representing the number of Green Credits a student earned on N consecutive days. The college wants to award a special badge for the longest streak of days where the student's daily credits strictly increased. Find the length of this longest continuously increasing contiguous sub-array.",
+  "difficulty": "easy",
+  "marks": 20,
+  "inputFormat": "The first line contains an integer N representing the number of days. The second line contains N space-separated integers representing the array A.",
+  "outputFormat": "Print a single integer representing the length of the longest strictly increasing contiguous sub-array.",
+  "constraints": [
+    "1 <= N <= 100000",
+    "0 <= A[i] <= 10000"
+  ],
+  "visibleTestCases": [
+    {
+      "input": "6\n1 3 5 2 4 6",
+      "output": "3"
+    },
+    {
+      "input": "5\n1 2 3 4 5",
+      "output": "5"
+    },
+    {
+      "input": "5\n5 4 3 2 1",
+      "output": "1"
     }
-  },
-  {
-    "round": 2,
-    "title": "Count Vowels",
-    "description": "Given a single lowercase string, print the count of vowels (a, e, i, o, u).",
-    "difficulty": "easy",
-    "inputFormat": "A single string s.",
-    "outputFormat": "Print the number of vowels.",
-    "constraints": ["1 <= |s| <= 10^5"],
-    "visibleTestCases": [
-      { "input": "codeverse", "output": "4", "ignoreOrder": false },
-      { "input": "rhythm", "output": "0", "ignoreOrder": false },
-      { "input": "banana", "output": "3", "ignoreOrder": false }
-    ],
-    "hiddenTestCases": [
-      { "input": "aeiou", "output": "5", "ignoreOrder": false },
-      { "input": "hackathon", "output": "3", "ignoreOrder": false }
-    ],
-    "starterCode": {
-      "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  string s;\n  cin >> s;\n  // print answer\n  return 0;\n}\n",
-      "java": "import java.util.*;\n\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    String s = sc.next();\n    // print answer\n  }\n}\n"
+  ],
+  "hiddenTestCases": [
+    {
+      "input": "5\n1 2 3 4 5",
+      "output": "5"
+    },
+    {
+      "input": "5\n5 4 3 2 1",
+      "output": "1"
     }
-  },
-  {
-    "round": 2,
-    "title": "Second Largest Number",
-    "description": "Given n integers, print the second largest distinct value.",
-    "difficulty": "medium",
-    "inputFormat": "First line n. Second line contains n integers.",
-    "outputFormat": "Print second largest distinct value.",
-    "constraints": ["2 <= n <= 2 * 10^5"],
-    "visibleTestCases": [
-      { "input": "5\n1 5 2 9 7", "output": "7", "ignoreOrder": false },
-      { "input": "6\n4 4 2 9 9 3", "output": "4", "ignoreOrder": false },
-      { "input": "5\n9 1 9 8 3", "output": "8", "ignoreOrder": false }
-    ],
-    "hiddenTestCases": [
-      { "input": "4\n10 8 6 4", "output": "8", "ignoreOrder": false },
-      { "input": "7\n1 1 1 5 5 3 2", "output": "3", "ignoreOrder": false }
-    ],
-    "starterCode": {
-      "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  int n;\n  cin >> n;\n  vector<long long> a(n);\n  for (int i = 0; i < n; i++) cin >> a[i];\n  // print answer\n  return 0;\n}\n",
-      "java": "import java.util.*;\n\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    int n = sc.nextInt();\n    long[] a = new long[n];\n    for (int i = 0; i < n; i++) a[i] = sc.nextLong();\n    // print answer\n  }\n}\n"
-    }
-  },
-  {
-    "round": 2,
-    "title": "Balanced Parentheses",
-    "description": "Given a string containing only ()[]{} characters, print YES if balanced else NO.",
-    "difficulty": "medium",
-    "inputFormat": "A single string s.",
-    "outputFormat": "YES or NO.",
-    "constraints": ["1 <= |s| <= 2 * 10^5"],
-    "visibleTestCases": [
-      { "input": "{[()]}", "output": "YES", "ignoreOrder": false },
-      { "input": "([)]", "output": "NO", "ignoreOrder": false },
-      { "input": "()[]{}", "output": "YES", "ignoreOrder": false }
-    ],
-    "hiddenTestCases": [
-      { "input": "(((())))", "output": "YES", "ignoreOrder": false },
-      { "input": "{[(])}", "output": "NO", "ignoreOrder": false }
-    ],
-    "starterCode": {
-      "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  string s;\n  cin >> s;\n  // print YES or NO\n  return 0;\n}\n",
-      "java": "import java.util.*;\n\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    String s = sc.next();\n    // print YES or NO\n  }\n}\n"
-    }
-  },
-  {
-    "round": 2,
-    "title": "Shortest Path in Unweighted Graph",
-    "description": "Given an undirected unweighted graph, find the shortest distance from source to destination using BFS.",
-    "difficulty": "hard",
-    "inputFormat": "n m on first line. Next m lines: u v. Last line: src dst.",
-    "outputFormat": "Shortest distance, or -1 if unreachable.",
-    "constraints": ["1 <= n <= 2 * 10^5", "1 <= m <= 2 * 10^5"],
-    "visibleTestCases": [
-      { "input": "5 5\n1 2\n2 3\n3 4\n4 5\n1 5\n1 4", "output": "3", "ignoreOrder": false },
-      { "input": "4 2\n1 2\n3 4\n1 4", "output": "-1", "ignoreOrder": false },
-      { "input": "3 2\n1 2\n2 3\n1 3", "output": "2", "ignoreOrder": false }
-    ],
-    "hiddenTestCases": [
-      { "input": "6 7\n1 2\n2 3\n3 6\n1 4\n4 5\n5 6\n2 5\n1 6", "output": "3", "ignoreOrder": false },
-      { "input": "3 1\n1 2\n2 1", "output": "1", "ignoreOrder": false }
-    ],
-    "starterCode": {
-      "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  int n, m;\n  cin >> n >> m;\n  vector<vector<int>> g(n + 1);\n  for (int i = 0; i < m; i++) {\n    int u, v;\n    cin >> u >> v;\n    g[u].push_back(v);\n    g[v].push_back(u);\n  }\n  int src, dst;\n  cin >> src >> dst;\n  // print shortest distance\n  return 0;\n}\n",
-      "java": "import java.util.*;\n\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    int n = sc.nextInt();\n    int m = sc.nextInt();\n    List<List<Integer>> g = new ArrayList<>();\n    for (int i = 0; i <= n; i++) g.add(new ArrayList<>());\n    for (int i = 0; i < m; i++) {\n      int u = sc.nextInt();\n      int v = sc.nextInt();\n      g.get(u).add(v);\n      g.get(v).add(u);\n    }\n    int src = sc.nextInt();\n    int dst = sc.nextInt();\n    // print shortest distance\n  }\n}\n"
-    }
-  },
-  {
-    "round": 2,
-    "title": "Merge Intervals",
-    "description": "Given n intervals, merge all overlapping intervals and print the resulting intervals in order of start.",
-    "difficulty": "hard",
-    "inputFormat": "First line n. Next n lines contain l r.",
-    "outputFormat": "Each merged interval in a new line as 'l r'.",
-    "constraints": ["1 <= n <= 2 * 10^5"],
-    "visibleTestCases": [
-      { "input": "4\n1 3\n2 6\n8 10\n15 18", "output": "1 6\n8 10\n15 18", "ignoreOrder": false },
-      { "input": "3\n1 4\n4 5\n7 9", "output": "1 5\n7 9", "ignoreOrder": false },
-      { "input": "5\n1 2\n2 3\n6 8\n7 9\n10 11", "output": "1 3\n6 9\n10 11", "ignoreOrder": false }
-    ],
-    "hiddenTestCases": [
-      { "input": "5\n1 2\n3 5\n4 6\n8 9\n9 12", "output": "1 2\n3 6\n8 12", "ignoreOrder": false },
-      { "input": "2\n2 3\n4 5", "output": "2 3\n4 5", "ignoreOrder": false }
-    ],
-    "starterCode": {
-      "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  int n;\n  cin >> n;\n  vector<pair<long long, long long>> intervals(n);\n  for (int i = 0; i < n; i++) cin >> intervals[i].first >> intervals[i].second;\n  // print merged intervals\n  return 0;\n}\n",
-      "java": "import java.util.*;\n\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    int n = sc.nextInt();\n    long[][] intervals = new long[n][2];\n    for (int i = 0; i < n; i++) {\n      intervals[i][0] = sc.nextLong();\n      intervals[i][1] = sc.nextLong();\n    }\n    // print merged intervals\n  }\n}\n"
-    }
+  ],
+  "starterCode": {
+    "cpp": "#include <iostream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    int N;\n    cin >> N;\n    vector<int> A(N);\n    for(int i = 0; i < N; i++) cin >> A[i];\n\n    // Write your code here\n\n    return 0;\n}",
+    "java": "import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int N = sc.nextInt();\n        int[] A = new int[N];\n        for(int i = 0; i < N; i++) {\n            A[i] = sc.nextInt();\n        }\n\n        // Write your code here\n\n    }\n}"
   }
+},{
+  "round": 2,
+  "title": "The Missing Registration ID",
+  "description": "Exactly N students were supposed to register for CodeVerse 2026, and they were assigned unique ID numbers from 1 to N. However, due to a database glitch, one student's ID was deleted from the final attendance array. Given an array arr of size N-1 containing the remaining distinct IDs, find the missing student's ID.",
+  "difficulty": "easy",
+  "marks": 20,
+  "inputFormat": "The first line contains an integer N. The second line contains N-1 space-separated integers representing the remaining student IDs.",
+  "outputFormat": "Print the missing integer.",
+  "constraints": [
+    "2 <= N <= 100000",
+    "1 <= arr[i] <= N"
+  ],
+  "visibleTestCases": [
+    {
+      "input": "5\n1 2 4 5",
+      "output": "3"
+    },
+    {
+      "input": "4\n1 2 3",
+      "output": "4"
+    },
+    {
+      "input": "6\n2 3 4 5 6",
+      "output": "1"
+    }
+  ],
+  "hiddenTestCases": [
+    {
+      "input": "4\n1 2 3",
+      "output": "4"
+    },
+    {
+      "input": "6\n2 3 4 5 6",
+      "output": "1"
+    }
+  ],
+  "starterCode": {
+    "cpp": "#include <iostream>\n#include <vector>\nusing namespace std;\n\nint main() {\n    int N;\n    cin >> N;\n    vector<int> arr(N-1);\n    for(int i = 0; i < N-1; i++) cin >> arr[i];\n\n    // Write your code here\n\n    return 0;\n}",
+    "java": "import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int N = sc.nextInt();\n        int[] arr = new int[N-1];\n        for(int i = 0; i < N-1; i++) {\n            arr[i] = sc.nextInt();\n        }\n\n        // Write your code here\n\n    }\n}"
+  }
+},{
+  "round": 2,
+  "title": "Sort Students by Score",
+  "description": "A programming contest recorded the scores of N students. Each student has a name and a score. Your task is to sort the students in descending order of their scores. If two students have the same score, sort them in ascending alphabetical order of their names.",
+  "difficulty": "medium",
+  "marks": 30,
+  "inputFormat": "The first line contains an integer N. The next N lines contain a student's name followed by their score.",
+  "outputFormat": "Print the sorted list of students. Each line should contain the student's name followed by their score.",
+  "constraints": [
+    "1 <= N <= 50000",
+    "1 <= score <= 1000"
+  ],
+  "visibleTestCases": [
+    {
+      "input": "4\nAlice 90\nBob 95\nCharlie 90\nDavid 80",
+      "output": "Bob 95\nAlice 90\nCharlie 90\nDavid 80"
+    },
+    {
+      "input": "3\nZara 50\nAmy 50\nJohn 100",
+      "output": "John 100\nAmy 50\nZara 50"
+    },
+    {
+      "input": "2\nTom 70\nJerry 70",
+      "output": "Jerry 70\nTom 70"
+    }
+  ],
+  "hiddenTestCases": [
+    {
+      "input": "3\nZara 50\nAmy 50\nJohn 100",
+      "output": "John 100\nAmy 50\nZara 50"
+    },
+    {
+      "input": "2\nTom 70\nJerry 70",
+      "output": "Jerry 70\nTom 70"
+    }
+  ],
+  "starterCode": {
+    "cpp": "#include <iostream>\n#include <vector>\n#include <algorithm>\nusing namespace std;\n\nint main() {\n    int N;\n    cin >> N;\n\n    vector<pair<string,int>> students(N);\n\n    for(int i = 0; i < N; i++) {\n        cin >> students[i].first >> students[i].second;\n    }\n\n    // Write your code here\n\n    return 0;\n}",
+    "java": "import java.util.*;\n\nclass Student {\n    String name;\n    int score;\n\n    Student(String name, int score) {\n        this.name = name;\n        this.score = score;\n    }\n}\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n\n        int N = sc.nextInt();\n        List<Student> students = new ArrayList<>();\n\n        for(int i = 0; i < N; i++) {\n            String name = sc.next();\n            int score = sc.nextInt();\n            students.add(new Student(name, score));\n        }\n\n        // Write your code here\n\n    }\n}"
+  }
+},{
+  "round": 2,
+  "title": "Next Greater Element",
+  "description": "You are given an array of N integers. For every element in the array, find the next greater element to its right. The next greater element for an element x is the first element greater than x that appears to its right. If no such element exists, print -1 for that position.",
+  "difficulty": "medium",
+  "marks": 30,
+  "inputFormat": "The first line contains an integer N. The second line contains N space-separated integers representing the array.",
+  "outputFormat": "Print N space-separated integers representing the next greater element for each position.",
+  "constraints": [
+    "1 <= N <= 100000",
+    "-10^9 <= A[i] <= 10^9"
+  ],
+  "visibleTestCases": [
+    {
+      "input": "4\n4 5 2 10",
+      "output": "5 10 10 -1"
+    },
+    {
+      "input": "5\n1 3 2 4 3",
+      "output": "3 4 4 -1 -1"
+    },
+    {
+      "input": "3\n9 8 7",
+      "output": "-1 -1 -1"
+    }
+  ],
+  "hiddenTestCases": [
+    {
+      "input": "5\n1 3 2 4 3",
+      "output": "3 4 4 -1 -1"
+    },
+    {
+      "input": "3\n9 8 7",
+      "output": "-1 -1 -1"
+    }
+  ],
+  "starterCode": {
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  int n;\n  cin >> n;\n  vector<long long> a(n);\n  for (int i = 0; i < n; i++) cin >> a[i];\n\n  // Write your code here\n\n  return 0;\n}\n",
+    "java": "import java.util.*;\n\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n\n    int n = sc.nextInt();\n    long[] a = new long[n];\n\n    for (int i = 0; i < n; i++) {\n      a[i] = sc.nextLong();\n    }\n\n    // Write your code here\n\n  }\n}\n"
+  }
+},{
+  "round": 2,
+  "title": "Minimum Latency Network",
+  "description": "The campus has N buildings connected with M bidirectional fiber optic cables. Each cable has a latency value representing communication delay in milliseconds. You want to send data from building 1 to building N as quickly as possible. Find the minimum total latency required to reach building N from building 1. If it is impossible to reach, print -1.",
+  "difficulty": "hard",
+  "marks": 50,
+  "inputFormat": "The first line contains two integers N and M. The next M lines each contain three integers u, v, w representing a cable between building u and v with latency w.",
+  "outputFormat": "Print the minimum total latency from building 1 to building N. If unreachable, print -1.",
+  "constraints": [
+    "2 <= N <= 100000",
+    "1 <= M <= 200000",
+    "1 <= w <= 10^9"
+  ],
+  "visibleTestCases": [
+    {
+      "input": "4 4\n1 2 1\n2 3 2\n3 4 3\n1 4 10",
+      "output": "6"
+    },
+    {
+      "input": "3 1\n1 2 5",
+      "output": "-1"
+    },
+    {
+      "input": "5 6\n1 2 2\n1 3 4\n2 3 1\n2 4 7\n3 5 3\n4 5 1",
+      "output": "6"
+    }
+  ],
+  "hiddenTestCases": [
+    {
+      "input": "5 6\n1 2 2\n1 3 4\n2 3 1\n2 4 7\n3 5 3\n4 5 1",
+      "output": "6"
+    },
+    {
+      "input": "4 2\n1 2 3\n3 4 5",
+      "output": "-1"
+    }
+  ],
+  "starterCode": {
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  int n, m;\n  cin >> n >> m;\n\n  vector<vector<pair<int,long long>>> g(n+1);\n\n  for(int i = 0; i < m; i++){\n    int u, v;\n    long long w;\n    cin >> u >> v >> w;\n    g[u].push_back({v, w});\n    g[v].push_back({u, w});\n  }\n\n  // Write your code here\n\n  return 0;\n}\n",
+    "java": "import java.util.*;\n\npublic class Main {\n  static class Edge {\n    int v;\n    long w;\n    Edge(int v, long w){\n      this.v = v;\n      this.w = w;\n    }\n  }\n\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n\n    int n = sc.nextInt();\n    int m = sc.nextInt();\n\n    List<List<Edge>> g = new ArrayList<>();\n    for(int i = 0; i <= n; i++) g.add(new ArrayList<>());\n\n    for(int i = 0; i < m; i++){\n      int u = sc.nextInt();\n      int v = sc.nextInt();\n      long w = sc.nextLong();\n\n      g.get(u).add(new Edge(v, w));\n      g.get(v).add(new Edge(u, w));\n    }\n\n    // Write your code here\n\n  }\n}\n"
+  }
+},{
+  "round": 2,
+  "title": "Scheduling the Ultimate Techfest",
+  "description": "As the organizer, you have a list of N potential tech workshops. Each workshop i has a start time S[i], an end time E[i], and a Hype Score H[i]. You have only one auditorium, meaning you cannot schedule two overlapping workshops. Find the maximum total Hype Score you can achieve by selecting a non-overlapping subset of workshops. If a workshop ends at time X, another workshop can start exactly at time X.",
+  "difficulty": "hard",
+  "marks": 50,
+  "inputFormat": "The first line contains an integer N (number of workshops). The next N lines each contain three integers S[i], E[i], and H[i].",
+  "outputFormat": "Print a single integer representing the maximum possible Hype Score.",
+  "constraints": [
+    "1 <= N <= 50000",
+    "1 <= S[i] < E[i] <= 10^9",
+    "1 <= H[i] <= 10^4"
+  ],
+  "visibleTestCases": [
+    {
+      "input": "4\n1 3 50\n2 5 20\n4 6 70\n6 9 60",
+      "output": "180"
+    },
+    {
+      "input": "3\n1 2 10\n2 3 20\n3 4 30",
+      "output": "60"
+    },
+    {
+      "input": "5\n1 4 10\n2 3 20\n3 5 30\n6 7 40\n7 9 50",
+      "output": "110"
+    }
+  ],
+  "hiddenTestCases": [
+    {
+      "input": "5\n1 4 10\n2 3 20\n3 5 30\n6 7 40\n7 9 50",
+      "output": "110"
+    },
+    {
+      "input": "4\n1 5 100\n2 3 50\n4 6 60\n6 8 70",
+      "output": "180"
+    }
+  ],
+  "starterCode": {
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  int n;\n  cin >> n;\n\n  vector<long long> s(n), e(n), h(n);\n  for(int i = 0; i < n; i++) {\n    cin >> s[i] >> e[i] >> h[i];\n  }\n\n  // Write your code here\n\n  return 0;\n}\n",
+    "java": "import java.util.*;\n\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n\n    int n = sc.nextInt();\n    long[] s = new long[n];\n    long[] e = new long[n];\n    long[] h = new long[n];\n\n    for(int i = 0; i < n; i++) {\n      s[i] = sc.nextLong();\n      e[i] = sc.nextLong();\n      h[i] = sc.nextLong();\n    }\n\n    // Write your code here\n\n  }\n}\n"
+  }
+}
 ]

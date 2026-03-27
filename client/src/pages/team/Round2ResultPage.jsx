@@ -8,6 +8,7 @@ import { ROUND_CONFIG } from "../../data/roundConfig";
 const mono = { fontFamily: "'DM Mono','Fira Code',monospace" };
 const card = { background: "#13161e", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "14px" };
 const lbl = { ...mono, fontSize: "9px", letterSpacing: "0.3em", textTransform: "uppercase", color: "rgba(148,163,184,0.45)" };
+const VISIBLE_TEST_CASES_REQUIRED = 3;
 
 const formatDateTime = (value) => {
   if (!value) return "-";
@@ -70,7 +71,9 @@ export default function Round2ResultPage() {
         visiblePassed: status.subA?.visiblePassed || 0,
         hiddenPassed: status.subA?.hiddenPassed || 0,
         hiddenTotal: status.subA?.hiddenTotal || 0,
-        passed: Boolean(status.subA?.passed),
+        passed:
+          Number(status.subA?.visiblePassed) >= VISIBLE_TEST_CASES_REQUIRED ||
+          Boolean(status.subA?.passed),
         submittedAt: status.subA?.submittedAt
       },
       {
@@ -81,7 +84,9 @@ export default function Round2ResultPage() {
         visiblePassed: status.subB?.visiblePassed || 0,
         hiddenPassed: status.subB?.hiddenPassed || 0,
         hiddenTotal: status.subB?.hiddenTotal || 0,
-        passed: Boolean(status.subB?.passed),
+        passed:
+          Number(status.subB?.visiblePassed) >= VISIBLE_TEST_CASES_REQUIRED ||
+          Boolean(status.subB?.passed),
         submittedAt: status.subB?.submittedAt
       }
     ];

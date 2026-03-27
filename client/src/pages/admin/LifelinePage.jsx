@@ -308,6 +308,7 @@ export default function LifelinePage() {
   }), [requests]);
 
   const activeFilter = STATUS_FILTERS.find(f=>f.key===statusFilter);
+  const maxRequests = Number(penaltyConfig?.maxRequests) || 1;
 
   return (
     <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }}
@@ -336,8 +337,8 @@ export default function LifelinePage() {
             </h1>
             <p style={{ fontSize:"12.5px", color:"rgba(203,213,225,0.55)",
               marginTop:"5px", fontFamily:"'Inter',sans-serif" }}>
-              Admin approval applies a{" "}
-              <span style={{ color:"#f472b6", fontWeight:600 }}>−{penaltyConfig?.perRound?.round2 ?? 10} / R3 -{penaltyConfig?.perRound?.round3 ?? 20}</span>.
+              Each team gets {maxRequests} shared lifeline across Round 2 and Round 3. Admin approval applies{" "}
+              <span style={{ color:"#f472b6", fontWeight:600 }}>R2 -{penaltyConfig?.perRound?.round2 ?? 10} pts / R3 -{penaltyConfig?.perRound?.round3 ?? 20} pts</span>.
             </p>
           </div>
 
@@ -461,3 +462,5 @@ export default function LifelinePage() {
     </motion.div>
   );
 }
+
+

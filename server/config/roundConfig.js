@@ -24,7 +24,7 @@ export const ROUND_CONFIG = Object.freeze({
     id: 1,
     title: "MCQ Arena",
     durationSeconds: 15 * 60,
-    maxScore: 45,
+    maxScore: 60,
     maxWarnings: 3
   },
 

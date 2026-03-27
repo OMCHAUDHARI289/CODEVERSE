@@ -1,20 +1,56 @@
 [
   {
-    "teamName": "Alpha Coders",
-    "teamId": "ALPHA001",
-    "password": "Team@123",
+    "teamName": "TRIVIBE",
+    "teamId": "TEAM001",
+    "password": "pass@01",
     "members": [
-      { "name": "Aarav", "email": "aarav@codeverse.local", "phone": "9000000001" },
-      { "name": "Isha", "email": "isha@codeverse.local", "phone": "9000000002" }
+      { "name": "", "email": "aarav1@codeverse.local", "phone": "9000000001" },
+      { "name": "", "email": "isha1@codeverse.local", "phone": "9000000002" }
     ]
   },
   {
-    "teamName": "Binary Beasts",
-    "teamId": "BINARY002",
-    "password": "Team@123",
+    "teamName": "SHECODE",
+    "teamId": "TEAM002",
+    "password": "pass@02",
     "members": [
-      { "name": "Riya", "email": "riya@codeverse.local", "phone": "9000000003" },
-      { "name": "Kunal", "email": "kunal@codeverse.local", "phone": "9000000004" }
+      { "name": "", "email": "riya1@codeverse.local", "phone": "9000000003" },
+      { "name": "", "email": "kunal1@codeverse.local", "phone": "9000000004" }
+    ]
+  },
+  {
+    "teamName": "BINARY_BRAINS",
+    "teamId": "TEAM003",
+    "password": "pass@03",
+    "members": [
+      { "name": "", "email": "aarav2@codeverse.local", "phone": "9000000005" },
+      { "name": "", "email": "isha2@codeverse.local", "phone": "9000000006" }
+    ]
+  },
+  {
+    "teamName": "ERROR_404",
+    "teamId": "TEAM004",
+    "password": "pass@04",
+    "members": [
+      { "name": "", "email": "riya2@codeverse.local", "phone": "9000000007" },
+      { "name": "", "email": "kunal2@codeverse.local", "phone": "9000000008" }
+    ]
+  },
+  {
+    "teamName": "PRO_CODERS",
+    "teamId": "TEAM005",
+    "password": "pass@05",
+    "members": [
+      { "name": "", "email": "aarav3@codeverse.local", "phone": "9000000009" },
+      { "name": "", "email": "isha3@codeverse.local", "phone": "9000000010" }
+    ]
+  },
+  {
+    "teamName": "CODEVERSE",
+    "teamId": "TEAM006",
+    "password": "pass@06",
+    "members": [
+      { "name": "", "email": "riya3@codeverse.local", "phone": "9000000011" },
+      { "name": "", "email": "kunal3@codeverse.local", "phone": "9000000012" }
     ]
   }
 ]

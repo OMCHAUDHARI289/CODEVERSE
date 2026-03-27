@@ -92,6 +92,81 @@ function OptionBtn({ label, letter, selected, onClick }) {
   );
 }
 
+function CodeSnippetBlock({ code }) {
+  const lines = String(code || "").replace(/\r\n/g, "\n").split("\n");
+
+  return (
+    <div style={{
+      marginTop:"12px",
+      borderRadius:"12px",
+      overflow:"hidden",
+      background:"#0b1220",
+      border:"1px solid rgba(56,189,248,0.15)",
+      boxShadow:"inset 0 1px 0 rgba(255,255,255,0.03)"
+    }}>
+      <div style={{
+        padding:"10px 14px",
+        borderBottom:"1px solid rgba(255,255,255,0.06)",
+        display:"flex",
+        alignItems:"center",
+        justifyContent:"space-between",
+        background:"rgba(15,23,42,0.92)"
+      }}>
+        <div style={{ display:"flex", alignItems:"center", gap:"6px" }}>
+          {["#f87171", "#fbbf24", "#34d399"].map((color) => (
+            <span key={color} style={{
+              width:"8px",
+              height:"8px",
+              borderRadius:"50%",
+              background:color,
+              boxShadow:`0 0 8px ${hex2rgba(color,0.45)}`
+            }} />
+          ))}
+        </div>
+        <span style={{ ...lbl, fontSize:"7px", color:"rgba(56,189,248,0.62)" }}>
+          C++ / Java Snippet
+        </span>
+      </div>
+
+      <div style={{ overflowX:"auto" }}>
+        <div style={{ minWidth:"100%", padding:"12px 0" }}>
+          {lines.map((line, index) => (
+            <div key={`${index}-${line}`} style={{
+              display:"grid",
+              gridTemplateColumns:"44px 1fr",
+              gap:"0",
+              alignItems:"start"
+            }}>
+              <div style={{
+                padding:"0 12px 0 14px",
+                textAlign:"right",
+                color:"rgba(148,163,184,0.4)",
+                fontSize:"11px",
+                lineHeight:1.8,
+                userSelect:"none",
+                borderRight:"1px solid rgba(255,255,255,0.05)"
+              }}>
+                {index + 1}
+              </div>
+              <pre style={{
+                margin:0,
+                padding:"0 16px",
+                whiteSpace:"pre",
+                color:"rgba(191,219,254,0.92)",
+                fontSize:"12px",
+                lineHeight:1.8,
+                ...mono
+              }}>
+                {line || " "}
+              </pre>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── QUESTION MAP ─── */
 function QuestionMap({ questions, answers, currentIndex, onJump }) {
   const maxScore = ROUND_CONFIG.round1.maxScore;
@@ -487,15 +562,7 @@ export default function Round1ArenaPage() {
 
                   {/* Code snippet */}
                   {currentQuestion?.codeSnippet && (
-                    <pre style={{
-                      ...mono, fontSize:"12px", lineHeight:1.75,
-                      color:"rgba(52,211,153,0.8)",
-                      background:"rgba(0,0,0,0.45)", border:"1px solid rgba(255,255,255,0.07)",
-                      borderRadius:"10px", padding:"14px 16px",
-                      overflowX:"auto", marginTop:"12px",
-                    }}>
-                      {currentQuestion.codeSnippet}
-                    </pre>
+                    <CodeSnippetBlock code={currentQuestion.codeSnippet} />
                   )}
 
                   {/* Options */}

@@ -18,6 +18,19 @@ const formatDateTime = (v) => {
   return new Date(v).toLocaleString("en-US", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
 };
 
+const formatDuration = (seconds) => {
+  const safe = Math.max(0, Number(seconds) || 0);
+  if (!safe) return "—";
+
+  const hours = Math.floor(safe / 3600);
+  const minutes = Math.floor((safe % 3600) / 60);
+  const remainingSeconds = safe % 60;
+
+  if (hours > 0) return `${hours}h ${minutes}m ${remainingSeconds}s`;
+  if (minutes > 0) return `${minutes}m ${remainingSeconds}s`;
+  return `${remainingSeconds}s`;
+};
+
 /* ─── TOKENS ─── */
 const mono = { fontFamily:"'DM Mono','Fira Code',monospace" };
 const card = { background:"#13161e", border:"1px solid rgba(255,255,255,0.07)", borderRadius:"14px" };
@@ -164,6 +177,28 @@ function ExpandedDetail({ team }) {
             </div>
           )}
         </div>
+      </div>
+
+      <div style={{ padding:"0 20px 16px", display:"grid",
+        gridTemplateColumns:"repeat(3,1fr)", gap:"16px" }}>
+        {[
+          { label:"Round 1", timing:team.roundTiming?.round1, accent:"#38bdf8" },
+          { label:"Round 2", timing:team.roundTiming?.round2, accent:"#a78bfa" },
+          { label:"Round 3", timing:team.roundTiming?.round3, accent:"#f472b6" }
+        ].map((item) => (
+          <div key={item.label} style={{ padding:"12px 14px", borderRadius:"10px",
+            background:"rgba(255,255,255,0.02)", border:`1px solid ${hex2rgba(item.accent,0.16)}` }}>
+            <p style={{ ...lbl, fontSize:"8px", marginBottom:"7px", color:hex2rgba(item.accent,0.7) }}>
+              {item.label} Time
+            </p>
+            <p style={{ fontSize:"14px", color:"#f1f5f9", ...mono }}>
+              {formatDuration(item.timing?.timeSpentSeconds)}
+            </p>
+            <p style={{ fontSize:"11px", color:"rgba(148,163,184,0.5)", marginTop:"6px" }}>
+              Completed: <span style={{ ...mono, color:"rgba(203,213,225,0.7)" }}>{formatDateTime(item.timing?.submittedAt)}</span>
+            </p>
+          </div>
+        ))}
       </div>
     </motion.div>
   );

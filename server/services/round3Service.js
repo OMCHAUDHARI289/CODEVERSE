@@ -4,19 +4,34 @@ import { ROUND_CONFIG } from "../config/roundConfig.js";
 import AppError from "../utils/appError.js";
 import { executeAgainstTestCases } from "./executorService.js";
 import {
+  evaluateRound3Code,
   getRound3Challenge,
+  getNextRound3Hint,
+  ROUND3_HINT_COOLDOWN_SECONDS,
   ROUND3_POINTS_PER_BUG,
-  ROUND3_TOTAL_BUGS
+  ROUND3_TOTAL_BUGS,
+  sanitizeRound3EditorCode
 } from "../../client/src/pages/team/round3/round3ChallengeData.js";
 
 const ROUND3 = ROUND_CONFIG.round3;
 const ROUND3_ALLOWED_LANGUAGES = ROUND3.allowedLanguages || ["cpp", "java"];
 const ROUND3_MAX_WARNINGS = Number(ROUND3.maxWarnings) || 3;
+const ROUND3_MAX_RUNS = 10;
 const ROUND3_LIFELINE_PENALTY = 20;
 const ROUND3_MAX_CODE_SIZE = 100000;
 
 const normalizeCode = (value = "") => String(value || "").replace(/\r\n/g, "\n");
 const normalizeOutput = (value = "") => String(value || "").replace(/\r\n/g, "\n").trim();
+const hintDateOrNull = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date : null;
+};
+const getHintRemainingSeconds = (nextHintAvailableAt) => {
+  const nextDate = hintDateOrNull(nextHintAvailableAt);
+  if (!nextDate) return 0;
+  return Math.max(0, Math.ceil((nextDate.getTime() - Date.now()) / 1000));
+};
 
 const hasExecutionError = (execution) => {
   const stderr = normalizeOutput(execution?.stderr);
@@ -137,6 +152,8 @@ const ensureRound3State = (team) => {
   if (typeof submission.totalBugs !== "number") submission.totalBugs = ROUND3_TOTAL_BUGS;
   if (typeof submission.warnings !== "number") submission.warnings = 0;
   if (typeof submission.runCount !== "number") submission.runCount = 0;
+  if (typeof submission.hintCount !== "number") submission.hintCount = 0;
+  if (!Array.isArray(submission.revealedHintBugIds)) submission.revealedHintBugIds = [];
   if (typeof submission.testResults !== "number") submission.testResults = 0;
   if (typeof submission.timeSpentSeconds !== "number") submission.timeSpentSeconds = 0;
   if (typeof submission.isStarted !== "boolean") submission.isStarted = false;
@@ -185,41 +202,51 @@ const withRound3Penalty = (team, evaluation) => {
 };
 
 const evaluateRound3ByExecution = async ({ language, code }) => {
-  const challenge = getRound3Challenge(language);
+  const bugEvaluation = evaluateRound3Code({ language, code });
   const executionResults = await executeAgainstTestCases({
     code,
     language,
     testCases: ROUND3_EXECUTION_TEST_CASES
   });
+  const executionFixedBugIds = executionResults
+    .filter(
+      (result, index) =>
+        !hasExecutionError(result) &&
+        compareOutput({
+          actual: result?.output,
+          expected: ROUND3_EXECUTION_TEST_CASES[index]?.output
+        })
+    )
+    .map((result, index) => Number(ROUND3_EXECUTION_TEST_CASES[index]?.id || result?.caseNo || index + 1))
+    .filter((id) => Number.isFinite(id));
+  const executionPassed = executionFixedBugIds.length;
+  const executionScore = executionPassed * ROUND3_POINTS_PER_BUG;
+  const bugFixedBugIds = Array.isArray(bugEvaluation.fixedBugIds) ? bugEvaluation.fixedBugIds : [];
+  const bugPassed = bugFixedBugIds.length;
+  const bugScore = bugPassed * ROUND3_POINTS_PER_BUG;
+  const useBugEvaluation = bugScore > executionScore;
+  const finalPassed = useBugEvaluation ? bugPassed : executionPassed;
+  const fixedBugIds = useBugEvaluation ? bugFixedBugIds : executionFixedBugIds;
+  const remainingBugIds = useBugEvaluation
+    ? Array.isArray(bugEvaluation.remainingBugIds)
+      ? bugEvaluation.remainingBugIds
+      : []
+    : ROUND3_EXECUTION_TEST_CASES.map((testCase) => Number(testCase.id)).filter(
+        (id) => !executionFixedBugIds.includes(id)
+      );
+  const finalScore = Math.max(executionScore, bugScore);
 
-  const fixedBugIds = [];
-  const remainingBugIds = [];
-
-  for (let index = 0; index < ROUND3_EXECUTION_TEST_CASES.length; index += 1) {
-    const testCase = ROUND3_EXECUTION_TEST_CASES[index];
-    const execution = executionResults[index] || {};
-    const passed =
-      !hasExecutionError(execution) &&
-      compareOutput({
-        actual: execution.output,
-        expected: testCase.output
-      });
-
-    if (passed) {
-      fixedBugIds.push(testCase.id);
-    } else {
-      remainingBugIds.push(testCase.id);
-    }
-  }
-
-  const passed = fixedBugIds.length;
   return {
-    passed,
+    passed: finalPassed,
+    executionPassed,
+    bugPassed,
     total: ROUND3_TOTAL_BUGS,
-    score: passed * ROUND3_POINTS_PER_BUG,
+    executionScore,
+    bugScore,
+    score: finalScore,
     fixedBugIds,
     remainingBugIds,
-    title: challenge.subtitle
+    title: bugEvaluation.title || getRound3Challenge(language).subtitle
   };
 };
 
@@ -244,8 +271,8 @@ const buildChallengePayload = async ({ language, codeOverride }) => {
     maxScore: Number(question?.marks) || ROUND3.maxScore,
     code:
       typeof codeOverride === "string"
-        ? codeOverride
-        : question?.buggyCode || challenge.buggyCode
+        ? sanitizeRound3EditorCode(codeOverride)
+        : challenge.buggyCode
   };
 };
 
@@ -256,11 +283,26 @@ const buildResultPayload = (result, { mode, reason = "", submittedAt = null }) =
   submittedAt,
   verdict:
     mode === "submit"
-      ? result.passed === result.total
+      ? Number(result.passed) === Number(result.total)
         ? "accepted"
         : "partial"
       : "analysis-complete"
 });
+
+const buildHintState = (submission) => {
+  const remainingSeconds = getHintRemainingSeconds(submission?.nextHintAvailableAt);
+
+  return {
+    usedCount: Number(submission?.hintCount) || 0,
+    revealedBugIds: Array.isArray(submission?.revealedHintBugIds)
+      ? submission.revealedHintBugIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
+      : [],
+    cooldownSeconds: ROUND3_HINT_COOLDOWN_SECONDS,
+    nextAvailableAt: submission?.nextHintAvailableAt || null,
+    remainingSeconds,
+    availableNow: remainingSeconds <= 0
+  };
+};
 
 const buildStatusPayload = async (team) => {
   ensureRound3State(team);
@@ -304,6 +346,7 @@ const buildStatusPayload = async (team) => {
     maxScore: ROUND3.maxScore,
     totalBugs: ROUND3_TOTAL_BUGS,
     pointsPerBug: ROUND3_POINTS_PER_BUG,
+    maxRuns: ROUND3_MAX_RUNS,
     maxWarnings: ROUND3_MAX_WARNINGS,
     selectedLanguage: language || null,
     warnings: warningCount,
@@ -314,6 +357,7 @@ const buildStatusPayload = async (team) => {
     submittedAt: submission.submittedAt || null,
     lastActivityAt: submission.lastActivityAt || null,
     challenge,
+    hint: buildHintState(submission),
     lastRun: hasLastRun ? submission.lastRun || null : null,
     finalResult: hasFinalResult ? submission.finalResult || null : null,
     result: submission.isSubmitted
@@ -405,10 +449,13 @@ export const startRound3Challenge = async ({ team, language }) => {
         "submissions.round3.totalBugs": ROUND3_TOTAL_BUGS,
         "submissions.round3.warnings": 0,
         "submissions.round3.runCount": 0,
+        "submissions.round3.hintCount": 0,
+        "submissions.round3.revealedHintBugIds": [],
         "submissions.round3.isStarted": true,
         "submissions.round3.isSubmitted": false,
         "submissions.round3.isSuspicious": false,
         "submissions.round3.startedAt": now,
+        "submissions.round3.nextHintAvailableAt": now,
         "submissions.round3.lastActivityAt": now,
         "submissions.round3.submitReason": "",
         "submissions.round3.timeSpentSeconds": 0,
@@ -477,8 +524,87 @@ export const addRound3WarningState = async (team) => {
   };
 };
 
+export const revealRound3Hint = async ({ team, code }) => {
+  const { submission, language } = await ensureStartedChallenge(team);
+  const currentCode = sanitizeRound3EditorCode(
+    typeof code === "string" ? code : submission.code || ""
+  );
+
+  if (!currentCode.trim()) {
+    throw new AppError("Code is required", 400);
+  }
+
+  if (currentCode.length > ROUND3_MAX_CODE_SIZE) {
+    throw new AppError("Code too large", 400);
+  }
+
+  const remainingSeconds = getHintRemainingSeconds(submission.nextHintAvailableAt);
+  if (remainingSeconds > 0) {
+    throw new AppError(`Hint will be available in ${remainingSeconds} seconds`, 400);
+  }
+
+  const hint = getNextRound3Hint({
+    language,
+    code: currentCode,
+    revealedHintBugIds: submission.revealedHintBugIds
+  });
+
+  if (!hint) {
+    throw new AppError("No more hints are available for this challenge", 400);
+  }
+
+  const now = new Date();
+  const nextHintAvailableAt = new Date(
+    now.getTime() + ROUND3_HINT_COOLDOWN_SECONDS * 1000
+  );
+
+  const updated = await Team.findOneAndUpdate(
+    {
+      _id: team._id,
+      "submissions.round3.isStarted": true,
+      "submissions.round3.isSubmitted": false,
+      $or: [
+        { "submissions.round3.nextHintAvailableAt": { $exists: false } },
+        { "submissions.round3.nextHintAvailableAt": { $lte: now } }
+      ]
+    },
+    {
+      $set: {
+        "submissions.round3.code": hint.code,
+        "submissions.round3.nextHintAvailableAt": nextHintAvailableAt,
+        "submissions.round3.lastActivityAt": now
+      },
+      $inc: {
+        "submissions.round3.hintCount": 1
+      },
+      $addToSet: {
+        "submissions.round3.revealedHintBugIds": hint.bugId
+      }
+    },
+    { new: true }
+  );
+
+  if (!updated) {
+    throw new AppError("Hint is cooling down right now", 400);
+  }
+
+  const refreshedSubmission = updated.submissions?.round3 || {};
+
+  return {
+    code: hint.code,
+    bugId: hint.bugId,
+    comment: hint.comment,
+    hint: buildHintState(refreshedSubmission)
+  };
+};
+
 export const runRound3Challenge = async ({ team, code }) => {
   const { submission, runtime, language } = await ensureStartedChallenge(team);
+  const currentRunCount = Number(submission.runCount) || 0;
+
+  if (currentRunCount >= ROUND3_MAX_RUNS) {
+    throw new AppError(`Run limit exceeded. Maximum ${ROUND3_MAX_RUNS} runs allowed`, 400);
+  }
 
   if (!code || !String(code).trim()) {
     throw new AppError("Code is required", 400);
@@ -488,7 +614,7 @@ export const runRound3Challenge = async ({ team, code }) => {
   }
 
   const now = new Date();
-  const normalizedCode = normalizeCode(code);
+  const normalizedCode = sanitizeRound3EditorCode(code);
   const executionEvaluation = await evaluateRound3ByExecution({
     language,
     code: normalizedCode
@@ -496,7 +622,7 @@ export const runRound3Challenge = async ({ team, code }) => {
   const evaluation = withRound3Penalty(team, executionEvaluation);
   const resultPayload = buildResultPayload(evaluation, { mode: "run" });
 
-  const runCount = (Number(submission.runCount) || 0) + 1;
+  const runCount = currentRunCount + 1;
   const timeSpentSeconds = Math.min(
     ROUND3.durationSeconds,
     getElapsedSeconds(submission.startedAt || runtime.startedAt)
@@ -504,6 +630,7 @@ export const runRound3Challenge = async ({ team, code }) => {
 
   const lastRun = {
     passed: evaluation.passed,
+    executionPassed: Number(evaluation.executionPassed) || 0,
     total: evaluation.total,
     score: evaluation.score,
     rawScore: Number(evaluation.rawScore) || Number(evaluation.score) || 0,
@@ -534,7 +661,7 @@ export const runRound3Challenge = async ({ team, code }) => {
         "submissions.round3.lastRunAt": now,
         "submissions.round3.lastActivityAt": now,
         "submissions.round3.timeSpentSeconds": timeSpentSeconds,
-        "submissions.round3.testResults": evaluation.passed
+        "submissions.round3.testResults": Number(evaluation.executionPassed) || 0
       }
     },
     { new: true }
@@ -579,7 +706,7 @@ export const submitRound3Challenge = async ({ team, code, reason = "manual" }) =
   }
 
   const now = new Date();
-  const normalizedCode = normalizeCode(code);
+  const normalizedCode = sanitizeRound3EditorCode(code);
   const executionEvaluation = await evaluateRound3ByExecution({
     language,
     code: normalizedCode
@@ -593,6 +720,7 @@ export const submitRound3Challenge = async ({ team, code, reason = "manual" }) =
 
   const finalResult = {
     passed: evaluation.passed,
+    executionPassed: Number(evaluation.executionPassed) || 0,
     total: evaluation.total,
     score: evaluation.score,
     rawScore: Number(evaluation.rawScore) || Number(evaluation.score) || 0,
@@ -620,7 +748,7 @@ export const submitRound3Challenge = async ({ team, code, reason = "manual" }) =
         "submissions.round3.fixedBugs": evaluation.passed,
         "submissions.round3.totalBugs": evaluation.total,
         "submissions.round3.warnings": warningCount,
-        "submissions.round3.testResults": evaluation.passed,
+        "submissions.round3.testResults": Number(evaluation.executionPassed) || 0,
         "submissions.round3.isStarted": true,
         "submissions.round3.isSubmitted": true,
         "submissions.round3.isSuspicious": Boolean(submission.isSuspicious) || warningCount > ROUND3_MAX_WARNINGS,
@@ -632,6 +760,7 @@ export const submitRound3Challenge = async ({ team, code, reason = "manual" }) =
         "submissions.round3.timeSpentSeconds": Math.min(ROUND3.durationSeconds, elapsedSeconds),
         "submissions.round3.lastRun": {
           passed: evaluation.passed,
+          executionPassed: Number(evaluation.executionPassed) || 0,
           total: evaluation.total,
           score: evaluation.score,
           rawScore: Number(evaluation.rawScore) || Number(evaluation.score) || 0,
@@ -694,6 +823,7 @@ export const getRound3ResultPayload = async (team) => {
     warnings: status.warnings,
     isSuspicious: status.isSuspicious,
     submitReason: team.submissions?.round3?.submitReason || "",
+    hint: status.hint,
     lastRun: status.lastRun,
     finalResult: status.finalResult
   };

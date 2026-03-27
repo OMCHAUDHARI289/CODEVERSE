@@ -139,6 +139,9 @@ const ensureRound2State = (team) => {
   if (typeof round2.totalScore !== "number") {
     round2.totalScore = 0;
   }
+  if (typeof round2.timeSpentSeconds !== "number") {
+    round2.timeSpentSeconds = 0;
+  }
 };
 
 const getSubState = (team, subKey) => {
@@ -328,6 +331,10 @@ const formatResultOutput = ({ visibleResults, hiddenSummary = null }) => {
   return lines.join("\n");
 };
 
+const didPassVisibleTests = ({ visiblePassedCount, visibleTotal }) =>
+  Number(visibleTotal) > 0 &&
+  Number(visiblePassedCount) === Number(visibleTotal);
+
 export const calculateRound2Score = ({ difficulty, passedCount }) => {
   const basePoints = Number(ROUND2.difficultyPoints[difficulty]) || 0;
   const awardedChunks = Math.min(3, Math.max(0, Number(passedCount) || 0));
@@ -487,6 +494,7 @@ export const startSubRound = async ({ team, subKey, difficulty, language }) => {
   const now = new Date();
   if (!team.submissions.round2.startedAt) {
     team.submissions.round2.startedAt = now;
+    team.submissions.round2.timeSpentSeconds = 0;
   }
 
   sub.problemId = question._id;
@@ -525,6 +533,7 @@ export const runOrSubmitSubRound = async ({
   }
 
   const sub = getSubState(team, subKey);
+  const round2StartedAt = team.submissions?.round2?.startedAt;
 
   // FIX #1: Run limit - prevent brute-force solving
   const MAX_RUNS = 50;
@@ -538,9 +547,8 @@ export const runOrSubmitSubRound = async ({
   }
 
   // FIX #2: Time limit check - prevent late submissions
-  const roundStart = team.submissions?.round2?.startedAt;
-  if (roundStart) {
-    const elapsed = (Date.now() - new Date(roundStart).getTime()) / 1000;
+  if (round2StartedAt) {
+    const elapsed = (Date.now() - new Date(round2StartedAt).getTime()) / 1000;
     if (elapsed > ROUND2.durationSeconds) {
       throw new AppError("Round 2 time is over", 400);
     }
@@ -608,6 +616,10 @@ export const runOrSubmitSubRound = async ({
   const totalTests = evaluation.results.length;
   const visiblePassedCount = visibleResults.filter((item) => item.passed).length;
   const hiddenPassedCount = hiddenResults.filter((item) => item.passed).length;
+  const passed = didPassVisibleTests({
+    visiblePassedCount,
+    visibleTotal: visible.length
+  });
   const allPassed = totalTests > 0 && totalPassed === totalTests;
   const resolvedDifficulty = sub.difficulty || question.difficulty;
   const baseScore = calculateRound2Score({
@@ -645,7 +657,7 @@ export const runOrSubmitSubRound = async ({
   if (!sub.difficulty && resolvedDifficulty) {
     sub.difficulty = resolvedDifficulty;
   }
-  sub.passed = allPassed;
+  sub.passed = passed;
   sub.baseScore = baseScore;
   sub.bonusPoints = bonusPoints;
   sub.passedCount = totalPassed;
@@ -666,7 +678,7 @@ export const runOrSubmitSubRound = async ({
     {
       $set: {
         [`submissions.round2.${subKey}.code`]: code,
-        [`submissions.round2.${subKey}.passed`]: allPassed,
+        [`submissions.round2.${subKey}.passed`]: passed,
         [`submissions.round2.${subKey}.baseScore`]: baseScore,
         [`submissions.round2.${subKey}.bonusPoints`]: bonusPoints,
         [`submissions.round2.${subKey}.passedCount`]: totalPassed,
@@ -691,7 +703,20 @@ export const runOrSubmitSubRound = async ({
   // Check if both subs are now submitted and advance round
   if (updated.submissions.round2.subA.isSubmitted && updated.submissions.round2.subB.isSubmitted) {
     if (!updated.submissions.round2.submittedAt) {
-      updated.submissions.round2.submittedAt = new Date();
+      const completedAt = new Date();
+      const startedAtMs = round2StartedAt ? new Date(round2StartedAt).getTime() : NaN;
+      const timeSpentSeconds = Number.isFinite(startedAtMs)
+        ? Math.max(
+            0,
+            Math.min(
+              ROUND2.durationSeconds,
+              Math.floor((completedAt.getTime() - startedAtMs) / 1000)
+            )
+          )
+        : 0;
+
+      updated.submissions.round2.submittedAt = completedAt;
+      updated.submissions.round2.timeSpentSeconds = timeSpentSeconds;
       updated.currentRound = Math.max(updated.currentRound, 3);
       await updated.save();
     }
@@ -704,7 +729,7 @@ export const runOrSubmitSubRound = async ({
   return {
     mode,
     subKey,
-    passed: allPassed,
+    passed,
     score,
     baseScore,
     bonusPoints,

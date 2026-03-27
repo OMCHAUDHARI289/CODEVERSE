@@ -3,7 +3,7 @@ export const ROUND_CONFIG = {
     id: 1,
     title: "Round 1 - MCQ Arena",
     durationSeconds: 30 * 60,
-    maxScore: 150,
+    maxScore: 60,
     warningTimeSeconds: 10 * 60,
     lowTimeSeconds: 5 * 60,
     fallbackQuestions: 15,

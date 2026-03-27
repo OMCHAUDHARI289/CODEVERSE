@@ -326,6 +326,9 @@ export default function TeamLayout() {
 
   const signalLabel = hardLockToRound1 ? "Round Locked" : eventLive ? "Stable" : "Standby";
   const signalAccent = hardLockToRound1 ? "#fb923c" : eventLive ? "#4ade80" : "#94a3b8";
+  const displayRoundCode = team.currentRound > 3 ? "LB" : `R${team.currentRound}`;
+  const totalScoreVisible = team.currentRound > 3;
+  const displayScore = totalScoreVisible ? team.totalScore : "Hidden";
 
   return (
     <div
@@ -580,11 +583,11 @@ export default function TeamLayout() {
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                     <div style={{ fontSize: "10px", color: "rgba(148,163,184,0.58)", display: "flex", justifyContent: "space-between" }}>
                       <span>Round</span>
-                      <span>R{team.currentRound}</span>
+                      <span>{displayRoundCode}</span>
                     </div>
                     <div style={{ fontSize: "10px", color: "rgba(148,163,184,0.58)", display: "flex", justifyContent: "space-between" }}>
                       <span>Score</span>
-                      <span>{team.totalScore}</span>
+                      <span>{displayScore}</span>
                     </div>
                     {metaError && (
                       <div style={{ fontSize: "9px", color: "rgba(251,146,60,0.75)", lineHeight: 1.4 }}>

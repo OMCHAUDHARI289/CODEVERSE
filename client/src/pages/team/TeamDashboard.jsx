@@ -15,7 +15,7 @@ const DASHBOARD_POLL_INTERVAL_MS = 20000;
 const RULES = [
   { n:"01", title:"Linear Progression",  accent:"#38bdf8", body:"You cannot return to a previous round once you proceed. Plan your submissions carefully." },
   { n:"02", title:"Timer Constraints",   accent:"#a78bfa", body:"The global timer runs continuously. Depletion results in immediate session termination." },
-  { n:"03", title:"Lifeline Mechanics",  accent:"#fb923c", body:"Two lifelines are available in Round 2 and Round 3 after 15 minutes. Approved requests deduct 10 points in Round 2 and 20 points in Round 3." },
+  { n:"03", title:"Lifeline Mechanics",  accent:"#fb923c", body:"One shared lifeline is available across Round 2 and Round 3 after 15 minutes. Approved requests deduct 10 points in Round 2 or 20 points in Round 3, depending on where it is used." },
   { n:"04", title:"Session Integrity",   accent:"#34d399", body:"Ungraceful disconnection flags your team for review. Maintain stable connection." },
 ];
 
@@ -35,7 +35,7 @@ const getRoundTitle = (id) => {
   if (id===1) return ROUND_CONFIG.round1.title;
   if (id===2) return ROUND_CONFIG.round2.title;
   if (id===3) return ROUND_CONFIG.round3.title;
-  return "Completed";
+  return "Leaderboard";
 };
 
 /* ─── SCAN LINE ─── */
@@ -301,6 +301,7 @@ export default function TeamDashboard() {
   const [team, setTeam] = useState({
     teamName:"Team", teamId:"T1", currentRound:1,
     totalScore:0, scores:{ round1:0, round2:0, round3:0 }, members:[],
+    round3Completed:false,
   });
   const [round1, setRound1] = useState({
     started:false, submitted:false,
@@ -321,6 +322,7 @@ export default function TeamDashboard() {
         totalScore:  Number(apiTeam.totalScore) || 0,
         scores:      apiTeam.scores || { round1:0, round2:0, round3:0 },
         members:     Array.isArray(apiTeam.members) ? apiTeam.members : [],
+        round3Completed: Boolean(apiTeam?.submissions?.round3?.isSubmitted) || currentRound > 3,
       };
       setTeam(normalizedTeam);
       setEventLive(Boolean(eventResp?.isLive));
@@ -361,13 +363,31 @@ export default function TeamDashboard() {
     return                          { label:"View Leaderboard", to:"/team/leaderboard", disabled:false, helper:"All rounds completed."     };
   }, [eventLive, round1, team.currentRound]);
 
+  const displayRoundCode = team.currentRound > 3 ? "LB" : `R${team.currentRound}`;
+  const totalScoreVisible = Boolean(team.round3Completed);
+  const totalScoreValue = totalScoreVisible ? String(team.totalScore) : "Hidden";
+  const totalScoreSub = totalScoreVisible ? "Final score unlocked" : "Visible after Round 3";
+  const previousRoundScore = team.currentRound === 1
+    ? "0"
+    : team.currentRound === 2
+      ? `${team.scores?.round1||0}`
+      : team.currentRound === 3
+        ? `${team.scores?.round2||0}`
+        : `${team.scores?.round3||0}`;
+  const previousRoundLabel = team.currentRound === 1
+    ? "N/A"
+    : team.currentRound === 2
+      ? `Round 1 · Max ${ROUND_CONFIG.round1.maxScore}`
+      : team.currentRound === 3
+        ? `Round 2 · Max ${ROUND_CONFIG.round2.maxScore}`
+        : `Round 3 · Max ${ROUND_CONFIG.round3.maxScore}`;
+
   const stats = useMemo(() => [
-    { label:"Current Round", value:`R${team.currentRound}`, accent:"#38bdf8", sub:getRoundTitle(team.currentRound) },
-    { label:"Total Score",   value:String(team.totalScore), accent:"#34d399", sub:"Live from backend" },
-    // FIX: Show only PREVIOUS round score, not current round
-    { label:"Previous Round Score", value:team.currentRound === 1 ? "0/0" : (team.currentRound === 2 ? `${team.scores?.round1||0}/${ROUND_CONFIG.round1.maxScore}` : `${team.scores?.round2||0}/${ROUND_CONFIG.round2.maxScore}`), accent:"#a78bfa", sub:team.currentRound === 1 ? "N/A" : (team.currentRound === 2 ? "Round 1 Score" : "Round 2 Score") },
+    { label:"Current Round", value:displayRoundCode, accent:"#38bdf8", sub:getRoundTitle(team.currentRound) },
+    { label:"Total Score",   value:totalScoreValue, accent:"#34d399", sub:totalScoreSub },
+    { label:"Previous Round Score", value:previousRoundScore, accent:"#a78bfa", sub:previousRoundLabel },
     { label:"Event Status",  value:eventLive?"Live":"Standby", accent:eventLive?"#22c55e":"#fb923c", sub:eventLive?"Rounds available":"Waiting for admin" },
-  ], [eventLive, team.currentRound, team.scores?.round1, team.scores?.round2, team.totalScore]);
+  ], [displayRoundCode, eventLive, previousRoundLabel, previousRoundScore, team.currentRound, totalScoreSub, totalScoreValue]);
 
   const rounds = useMemo(() => {
     const c = team.currentRound;
@@ -626,3 +646,4 @@ export default function TeamDashboard() {
     </>
   );
 }
+

@@ -1,5 +1,17 @@
-import { ROUND3_TOTAL_BUGS } from "../pages/team/round3/round3ChallengeData";
+import {
+  ROUND3_HINT_COOLDOWN_SECONDS,
+  ROUND3_TOTAL_BUGS
+} from "../pages/team/round3/round3ChallengeData";
 import httpClient from "./httpClient";
+
+const defaultHintState = {
+  usedCount: 0,
+  revealedBugIds: [],
+  cooldownSeconds: ROUND3_HINT_COOLDOWN_SECONDS,
+  nextAvailableAt: null,
+  remainingSeconds: 0,
+  availableNow: true
+};
 
 /**
  * Fetch previous Round 3 progress and state from backend
@@ -27,6 +39,7 @@ export const fetchRound3Progress = async () => {
       remainingSeconds: Number(data.remainingSeconds) || 0,
       lastRun: data.lastRun || null,
       challenge: data.challenge || null,
+      hint: data.hint || defaultHintState,
       // FIX: Return finalResult if submitted, otherwise null
       finalResult: data.finalResult || null,
       result: data.result || null,
@@ -56,6 +69,7 @@ export const fetchRound3Progress = async () => {
       remainingSeconds: 0,
       lastRun: null,
       challenge: null,
+      hint: defaultHintState,
       finalResult: null,
       result: null,
       score: 0,
@@ -94,6 +108,7 @@ export const fetchRound3Result = async () => {
       warnings: Number(data.warnings) || 0,
       isSuspicious: Boolean(data.isSuspicious),
       submitReason: data.submitReason || "",
+      hint: data.hint || defaultHintState,
       lastRun: data.lastRun || null,
       finalResult: data.finalResult || null
     };
@@ -116,6 +131,7 @@ export const fetchRound3Result = async () => {
       warnings: 0,
       isSuspicious: false,
       submitReason: "",
+      hint: defaultHintState,
       lastRun: null,
       finalResult: null
     };
@@ -144,8 +160,23 @@ export const fetchRound3BuggyCode = async (language) => {
     warnings: Number(data?.warnings) || 0,
     isSuspicious: Boolean(data?.isSuspicious),
     runCount: Number(data?.runCount) || 0,
+    hint: data?.hint || defaultHintState,
     lastRun: data?.lastRun || null,
     finalResult: data?.finalResult || null
+  };
+};
+
+export const requestRound3Hint = async ({ language, code }) => {
+  const { data } = await httpClient.post("/api/round/round3/hint", {
+    language,
+    code
+  });
+
+  return {
+    code: data?.code || code || "",
+    bugId: Number(data?.bugId) || 0,
+    comment: data?.comment || "",
+    hint: data?.hint || defaultHintState
   };
 };
 

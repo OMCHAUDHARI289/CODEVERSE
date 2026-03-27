@@ -3,6 +3,7 @@ import {
   addRound3WarningState,
   getRound3ResultPayload,
   getRound3StatusPayload,
+  revealRound3Hint,
   runRound3Challenge,
   startRound3Challenge,
   submitRound3Challenge
@@ -24,6 +25,15 @@ export const startRound3 = asyncHandler(async (req, res) => {
 
 export const addRound3Warning = asyncHandler(async (req, res) => {
   const payload = await addRound3WarningState(req.team);
+  res.json(payload);
+});
+
+export const getRound3Hint = asyncHandler(async (req, res) => {
+  const payload = await revealRound3Hint({
+    team: req.team,
+    code: req.body?.code
+  });
+
   res.json(payload);
 });
 

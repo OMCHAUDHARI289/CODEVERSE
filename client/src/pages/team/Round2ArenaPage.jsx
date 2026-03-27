@@ -34,12 +34,25 @@ const DEFAULT_SELECT = {
 const EMPTY_CONSOLE_DATA = { subA: null, subB: null };
 const LIFELINE_UNLOCK_DELAY_SECONDS = 15 * 60;
 const LIFELINE_STATUS_POLL_MS = 15000;
+const VISIBLE_TEST_CASES_REQUIRED = 3;
 
-const getSubMeta = (status, subKey) =>
-  status?.[subKey] || {
-    isStarted: false, isSubmitted: false, passed: false,
-    score: 0, difficulty: null, language: null,
+const getSubMeta = (status, subKey) => {
+  const sub = status?.[subKey];
+
+  if (!sub) {
+    return {
+      isStarted: false, isSubmitted: false, passed: false,
+      score: 0, difficulty: null, language: null,
+    };
+  }
+
+  return {
+    ...sub,
+    passed:
+      Number(sub.visiblePassed) >= VISIBLE_TEST_CASES_REQUIRED ||
+      Boolean(sub.passed),
   };
+};
 
 const isOutputSuccess = (c) =>
   Boolean(c?.mode === "run" && c?.passed) ||
@@ -627,7 +640,7 @@ export default function Round2ArenaPage() {
   const lifelineWaitSeconds = lifelineUnlockAtMs
     ? Math.max(0, Math.ceil((lifelineUnlockAtMs - tick) / 1000))
     : LIFELINE_UNLOCK_DELAY_SECONDS;
-  const lifelineRemaining = Number(lifeline?.remainingCount ?? 2);
+  const lifelineRemaining = Number(lifeline?.remainingCount ?? 1);
   const lifelineUsedCount = Number(lifeline?.usedCount ?? 0);
   const lifelinePending = lifeline?.request?.status === "pending";
   const lifelineApproved = lifeline?.request?.status === "approved";
@@ -821,14 +834,14 @@ export default function Round2ArenaPage() {
           <div>
             <p style={{ ...lbl, color:"rgba(56,189,248,.62)" }}>Round 2 Lifeline</p>
             <p style={{ fontSize:"12px", color:"rgba(203,213,225,.72)", marginTop:"6px", fontFamily:"'Inter',sans-serif" }}>
-              Send an admin request after 15 minutes. Each approved lifeline deducts {lifelinePenalty} points. You can use {lifeline?.maxRequests ?? 2} in this round.
+              Send an admin request after 15 minutes. Each approved lifeline deducts {lifelinePenalty} points. You can use {lifeline?.maxRequests ?? 1} shared lifeline across Round 2 and Round 3.
             </p>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:"10px", flexWrap:"wrap" }}>
             <div style={{ padding:"9px 14px", borderRadius:"10px", background:"rgba(56,189,248,.08)", border:"1px solid rgba(56,189,248,.2)" }}>
               <p style={{ ...lbl, fontSize:"8px", color:"rgba(56,189,248,.6)", marginBottom:"4px" }}>Usage</p>
               <p style={{ ...mono, fontSize:"16px", fontWeight:700, color:"#7dd3fc" }}>
-                {lifelineUsedCount} / {lifeline?.maxRequests ?? 2}
+                {lifelineUsedCount} / {lifeline?.maxRequests ?? 1}
               </p>
             </div>
             <div style={{ padding:"9px 14px", borderRadius:"10px", background:"rgba(167,139,250,.08)", border:"1px solid rgba(167,139,250,.2)" }}>
@@ -848,11 +861,11 @@ export default function Round2ArenaPage() {
                   : lifelinePending
                     ? "Your latest request is pending admin approval."
                     : lifelineRemaining <= 0
-                      ? "You have used all Round 2 lifelines."
+                      ? "Your shared lifeline has already been used."
                       : lifelineApproved
-                        ? "Approved lifeline applied. One request is still available."
+                        ? "Approved lifeline applied. No lifelines remain."
                         : lifelineRejected
-                          ? "Last request was rejected. You can try again if attempts remain."
+                          ? "Last request was rejected. You can try again if the shared lifeline is still unused."
                           : "Lifeline is unlocked and ready to request."}
             </p>
             {lifeline?.request?.requestedAt && (
@@ -1313,4 +1326,5 @@ export default function Round2ArenaPage() {
     </motion.section>
   );
 }
+
 
