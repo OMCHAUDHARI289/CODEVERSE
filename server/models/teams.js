@@ -4,7 +4,9 @@ const memberSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     email: { type: String, trim: true },
-    phone: { type: String, trim: true }
+    phone: { type: String, trim: true },
+    erpId: { type: String, trim: true },
+    points: { type: Number, default: 0 }
   },
   { _id: false }
 );
@@ -224,12 +226,24 @@ const teamSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ⚡ Keep totalScore consistent
+// ⚡ Keep totalScore consistent and store equal share per member in DB
 teamSchema.pre("save", function (next) {
   this.totalScore =
     (this.scores.round1 || 0) +
     (this.scores.round2 || 0) +
     (this.scores.round3 || 0);
+
+  if (Array.isArray(this.members) && this.members.length) {
+    const teamMemberCount = this.members.length;
+    const perMemberPoints = Number((this.totalScore / teamMemberCount).toFixed(2));
+
+    this.members = this.members.map((member) => ({
+      ...member.toObject ? member.toObject() : member,
+      erpId: member.erpId || "",
+      points: perMemberPoints
+    }));
+  }
+
   next();
 });
 

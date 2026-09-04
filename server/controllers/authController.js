@@ -23,7 +23,12 @@ const mapTeamPayload = (team) => ({
   currentRound: team.currentRound,
   totalScore: team.totalScore,
   scores: team.scores,
-  members: team.members || [],
+  members: (team.members || []).map(({ name, email, phone, erpId }) => ({
+    name,
+    email,
+    phone,
+    erpId
+  })),
   submissions: {
     round1: {
       isSubmitted: Boolean(team.submissions?.round1?.isSubmitted),

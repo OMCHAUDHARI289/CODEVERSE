@@ -220,8 +220,6 @@ export default function TeamLayout() {
 
   const isNavItemLocked = useMemo(
     () => (item) => {
-      // FIX: Only lock sidebar when actively ON a Round 3 page (not on result page)
-      // This ensures sidebar is only locked during active round attempts, not just because currentRound is 3
       const isOnRound3Page = location.pathname.includes("/round3/") && !location.pathname.includes("/round3/result");
       if (isOnRound3Page && !location.pathname.startsWith(item.path) && item.path !== "/team") {
         return true;
@@ -230,11 +228,19 @@ export default function TeamLayout() {
       if (hardLockToRound1 && !item.path.startsWith(ROUND1_PATH_PREFIX)) {
         return true;
       }
-      // FIX: Sequential round progression - can't skip rounds
+
+      if (item.path.startsWith("/team/round1") && team.currentRound > 1 && !location.pathname.startsWith("/team/round1/result")) {
+        return true;
+      }
+
+      if (item.path.startsWith("/team/round2") && team.currentRound > 2 && !location.pathname.startsWith("/team/round2/result")) {
+        return true;
+      }
+
       if (item.minRound > team.currentRound) {
         return true;
       }
-      // FIX: Lock leaderboard until team reaches round 3 (completed rounds 1 & 2)
+
       if (item.path === "/team/leaderboard" && team.currentRound < 3) {
         return true;
       }
@@ -245,7 +251,11 @@ export default function TeamLayout() {
 
   useEffect(() => {
     if (loadingMeta) return;
-    if (!hardLockToRound1 || location.pathname.startsWith(ROUND1_PATH_PREFIX)) {
+
+    const isRound1LockedByProgression = location.pathname.startsWith("/team/round1") && team.currentRound > 1;
+    const isRound2LockedByProgression = location.pathname.startsWith("/team/round2") && team.currentRound > 2 && !location.pathname.startsWith("/team/round2/result");
+
+    if (!hardLockToRound1 && !isRound1LockedByProgression && !isRound2LockedByProgression) {
       return;
     }
 
@@ -258,7 +268,8 @@ export default function TeamLayout() {
 
         const apiTeam = userResp?.team || {};
         const currentRound = Number(apiTeam.currentRound) || 1;
-        if (currentRound > 1) {
+
+        if (currentRound > 1 && location.pathname.startsWith("/team/round1")) {
           setTeam((prev) => ({
             ...prev,
             teamName: apiTeam.teamName || prev.teamName,
@@ -267,21 +278,43 @@ export default function TeamLayout() {
             totalScore: Number(apiTeam.totalScore) || prev.totalScore
           }));
           setRound1State({ started: false, submitted: true });
+          if (!cancelled) navigate("/team/round2", { replace: true });
           return;
         }
 
-        const round1Status = await getRound1Status();
-        if (cancelled) return;
-        if (round1Status?.submitted) {
-          setRound1State({ started: false, submitted: true });
+        if (currentRound > 2 && location.pathname.startsWith("/team/round2") && !location.pathname.startsWith("/team/round2/result")) {
+          setTeam((prev) => ({
+            ...prev,
+            teamName: apiTeam.teamName || prev.teamName,
+            teamId: apiTeam.teamId || prev.teamId,
+            currentRound,
+            totalScore: Number(apiTeam.totalScore) || prev.totalScore
+          }));
+          setRound2State({ started: false, submitted: true, activeSub: null });
+          if (!cancelled) navigate("/team/round3", { replace: true });
           return;
+        }
+
+        if (hardLockToRound1 && !location.pathname.startsWith(ROUND1_PATH_PREFIX)) {
+          const round1Status = await getRound1Status();
+          if (cancelled) return;
+          if (round1Status?.submitted) {
+            setRound1State({ started: false, submitted: true });
+            return;
+          }
         }
       } catch {
         // fall through to arena redirect
       }
 
       if (!cancelled) {
-        navigate(ROUND1_ARENA_PATH, { replace: true });
+        if (location.pathname.startsWith("/team/round1") && team.currentRound > 1) {
+          navigate("/team/round2", { replace: true });
+        } else if (location.pathname.startsWith("/team/round2") && team.currentRound > 2) {
+          navigate("/team/round3", { replace: true });
+        } else if (hardLockToRound1) {
+          navigate(ROUND1_ARENA_PATH, { replace: true });
+        }
       }
     };
 
@@ -289,7 +322,7 @@ export default function TeamLayout() {
     return () => {
       cancelled = true;
     };
-  }, [hardLockToRound1, loadingMeta, location.pathname, navigate]);
+  }, [hardLockToRound1, loadingMeta, location.pathname, navigate, team.currentRound]);
 
   const handleLogout = async () => {
     if (activeRoundNumber === 1) {
